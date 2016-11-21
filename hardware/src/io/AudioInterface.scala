@@ -97,6 +97,8 @@ class AudioInterface(AUDIOLENGTH: Int, AUDIOFSDIVIDER: Int, AUDIOCLKDIVIDER: Int
   val i2cAckReg	 = Reg(init = Bits(0, 1)) //1 Bit acknowledge signal
   val i2cReqReg  = Reg(init = Bits(0, 1)) //1 Bit request signal
 
+  val testFFTReg = Reg(init = Bits(0, 1)) //test for FFT
+
   // Default response
   val respReg = Reg(init = OcpResp.NULL)
   respReg := OcpResp.NULL
@@ -134,6 +136,8 @@ class AudioInterface(AUDIOLENGTH: Int, AUDIOFSDIVIDER: Int, AUDIOCLKDIVIDER: Int
     is(Bits("b01111")) { data := i2cAdrReg }
     is(Bits("b10000")) { data := i2cAckReg }
     is(Bits("b10001")) { data := i2cReqReg }
+
+    is(Bits("b11000")) { data := testFFTReg }
   }
 
   // Write Information
@@ -157,6 +161,8 @@ class AudioInterface(AUDIOLENGTH: Int, AUDIOFSDIVIDER: Int, AUDIOCLKDIVIDER: Int
       is(Bits("b01110")) { i2cDataReg := io.ocp.M.Data(8,0) }
       is(Bits("b01111")) { i2cAdrReg := io.ocp.M.Data(6,0) }
       is(Bits("b10001")) { i2cReqReg := io.ocp.M.Data(0) }
+
+      is(Bits("b11000")) { testFFTReg := io.ocp.M.Data(0) }
     }
   }
 
@@ -241,4 +247,16 @@ class AudioInterface(AUDIOLENGTH: Int, AUDIOFSDIVIDER: Int, AUDIOCLKDIVIDER: Int
   io.audioInterfacePins.we := mAudioCtrl.io.weO
   io.audioInterfacePins.sdOut := mAudioCtrl.io.sdinO
   io.audioInterfacePins.sclkOut := mAudioCtrl.io.sclkO
+
+  val mtestFFT = Module(new TestFFT())
+}
+
+
+//Test FFT module
+class TestFFTIO extends Bundle {
+  val testFFTRreg = UInt(INPUT, 32)
+}
+
+class TestFFT extends BlackBox {
+  val io = new TestFFTIO()
 }
