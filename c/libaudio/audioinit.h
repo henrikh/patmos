@@ -92,7 +92,7 @@ const int AUDIO_CORES = 1;
 const int FX_AMOUNT = 1;
 // FX_ID | CORE | FX_TYPE | XB_SIZE | YB_SIZE | P (S) | IN_TYPE | OUT_TYPE | FROM_ID | TO_ID //
 const int FX_SCHED[FX_AMOUNT][10] = {
-    {0, 0, 6, 1, 1, 1, 0, 0, -1,  -1}
+    {0, 0, 12, 1, 1, 1, 0, 0, -1,  -1}
 };
 //amount of NoC channels
 const int CHAN_AMOUNT = 0;

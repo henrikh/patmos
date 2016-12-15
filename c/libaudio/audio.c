@@ -1125,9 +1125,13 @@ int audio_process(struct AudioFX *audioP) {
             if(CPUcyclesCount < CPU_CYCLES_LIMIT) {
                 CPUcyclesCount++;
                 if(CPUcyclesCount == CPU_CYCLES_LIMIT) {
+                    unsigned int prev_diff = 0;
                     for(int i=0; i<CPU_CYCLES_LIMIT; i++) {
                         unsigned int diff = CPUcyclesE[i] - CPUcyclesB[i];
-                        printf("i=%d: diff=%u\n", i, diff);
+                        if(diff != prev_diff) {
+                            printf("i=%d: diff=%u\n", i, diff);
+                        }
+                        prev_diff = diff;
                     }
                 }
             }
