@@ -6,10 +6,14 @@ const int LIM = 1000;
 const int NOC_MASTER = 0;
 
 
+const int CPU_CYCLES_LIMIT = 1000;
+
 void threadFunc(void* args) {
     volatile _UNCACHED int **inArgs = (volatile _UNCACHED int **) args;
     volatile _UNCACHED int *exitP      = inArgs[0];
     volatile _UNCACHED int *allocsDoneP = inArgs[1];
+
+    volatile _UNCACHED unsigned int *cpu_diffsP   = inArgs[1+AUDIO_CORES];
 
 
     /*
@@ -107,13 +111,38 @@ void threadFunc(void* args) {
     //loop
     //audioValuesP[0] = 0;
     //int i=0;
+
+
+    unsigned int CPUcyclesB[CPU_CYCLES_LIMIT];
+    unsigned int CPUcyclesE[CPU_CYCLES_LIMIT];
+    unsigned int CPUcyclesCount = 0;
+
     while(*exitP == 0) {
     //i++;
     //for(int i=0; i<DEBUG_LOOPLENGTH; i++) {
 
+        CPUcyclesB[CPUcyclesCount] = get_cpu_cycles();
+
         for(int n=0; n<FX_HERE; n++) {
             if (audio_process(&FXp[n]) == 1) {
                 //timeout stuff here
+            }
+        }
+
+        CPUcyclesE[CPUcyclesCount] = get_cpu_cycles();
+
+        if(CPUcyclesCount < CPU_CYCLES_LIMIT) {
+            CPUcyclesCount++;
+            if(CPUcyclesCount == CPU_CYCLES_LIMIT) {
+                unsigned int prev_diff = 0;
+                for(int i=0; i<CPU_CYCLES_LIMIT; i++) {
+                    unsigned int diff = CPUcyclesE[i] - CPUcyclesB[i];
+                    if(diff != prev_diff) {
+                        //store value
+                        cpu_diffsP[i] = diff;
+                    }
+                    prev_diff = diff;
+                }
             }
         }
 
@@ -138,11 +167,19 @@ int main() {
     //arguments to thread 1 function
     int exit = 0;
     int allocsDone[AUDIO_CORES] = {0};
+
+    unsigned int cpu_diffs[CPU_CYCLES_LIMIT] = {0};
+
     volatile _UNCACHED int *exitP = (volatile _UNCACHED int *) &exit;
     volatile _UNCACHED int *allocsDoneP = (volatile _UNCACHED int *) &allocsDone;
-    volatile _UNCACHED int (*threadFunc_args[1+AUDIO_CORES]);
+
+    volatile _UNCACHED int *cpu_diffsP = (volatile _UNCACHED int *) &cpu_diffs[0];
+
+    volatile _UNCACHED int (*threadFunc_args[1+AUDIO_CORES + CPU_CYCLES_LIMIT]);
     threadFunc_args[0] = exitP;
     threadFunc_args[1] = allocsDoneP;
+
+    threadFunc_args[1+AUDIO_CORES] = cpu_diffsP;
 
     printf("starting thread and NoC channels...\n");
     //set thread function and start thread
@@ -281,8 +318,8 @@ int main() {
 
 
     //CPU cycles stuff
-    int CPUcycles[LIM] = {0};
-    unsigned int cpu_pnt = 0;
+    //int CPUcycles[LIM] = {0};
+    //unsigned int cpu_pnt = 0;
 
 
     //int wait_recv = 18; //amount of loops until audioOut is done
@@ -309,7 +346,7 @@ int main() {
             */
         }
 
-
+        /*
         //store CPU Cycles
         CPUcycles[cpu_pnt] = get_cpu_cycles();
         cpu_pnt++;
@@ -317,7 +354,7 @@ int main() {
             //break;
             cpu_pnt = 0;
         }
-
+        */
 
     }
 
@@ -331,11 +368,11 @@ int main() {
     exit = 1;
     printf("waiting for all threads to finish...\n");
 
-
+    /*
     for(int i=1; i<LIM; i++) {
         printf("%d\n", (CPUcycles[i]-CPUcycles[i-1]));
     }
-
+    */
 
     /*
     for(int i=0; i<(LIM-WAIT); i++) {
@@ -344,6 +381,14 @@ int main() {
         }
     }
     */
+
+
+    printf("CPU diff values of core 1:\n");
+    for(int i=0; i<CPU_CYCLES_LIMIT; i++) {
+        if(cpu_diffs[i] != 0) {
+            printf("i=%d: diff=%u\n", i, cpu_diffs[i]);
+        }
+    }
 
     //join with thread 1
 
