@@ -272,17 +272,9 @@ int main() {
         printf("ERROR: Problem with NoC initialisation\n");
     }
 
-    /*
-    printf("SOME INFO: \n");
-    printf("FX_HERE=%d\n", FX_HERE);
-    printf("fx_id: %d, cpuid: %d, is_fst:%u, is_lst: %u, in_con: %u, out_con: %u\n", *FXp[0].fx_id, *FXp[0].cpuid, *FXp[0].is_fst, *FXp[0].is_lst, *FXp[0].in_con, *FXp[0].out_con);
-    printf("x_pnt=0x%x, y_pnt=0x%x, pt=%u, p=%u, rpr=%u, spr=%u, ppsr=%u, xb_size=%u, yb_size=%u, fx=%u, fx_pnt=0x%x\n", *FXp[0].x_pnt, *FXp[0].y_pnt, *FXp[0].pt, *FXp[0].p, *FXp[0].rpr, *FXp[0].spr, *FXp[0].ppsr, *FXp[0].xb_size, *FXp[0].yb_size, *FXp[0].fx, *FXp[0].fx_pnt);
-    */
-
-
     //CPU cycles stuff
-    int CPUcycles[LIM] = {0};
-    unsigned int cpu_pnt = 0;
+    //int CPUcycles[LIM] = {0};
+    //unsigned int cpu_pnt = 0;
 
 
     //int wait_recv = 18; //amount of loops until audioOut is done
@@ -309,7 +301,7 @@ int main() {
             */
         }
 
-
+        /*
         //store CPU Cycles
         CPUcycles[cpu_pnt] = get_cpu_cycles();
         cpu_pnt++;
@@ -317,7 +309,7 @@ int main() {
             //break;
             cpu_pnt = 0;
         }
-
+        */
 
     }
 
@@ -331,11 +323,11 @@ int main() {
     exit = 1;
     printf("waiting for all threads to finish...\n");
 
-
+    /*
     for(int i=1; i<LIM; i++) {
         printf("%d\n", (CPUcycles[i]-CPUcycles[i-1]));
     }
-
+    */
 
     /*
     for(int i=0; i<(LIM-WAIT); i++) {

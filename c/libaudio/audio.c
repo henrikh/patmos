@@ -990,6 +990,13 @@ const int TIMEOUT = 5804;  // timeout ~256 samples
 //const int TIMEOUT = 0;
 //const int TIMEOUT = 0xFFFFF;
 
+
+//PROCESS PPSR TIMES
+const int CPU_CYCLES_LIMIT = 100;
+unsigned int CPUcyclesB[CPU_CYCLES_LIMIT] = {0};
+unsigned int CPUcyclesE[CPU_CYCLES_LIMIT] = {0};
+int CPUcyclesCount = 0;
+
 //int audio_process(struct AudioFX *audioP) __attribute__((section("text.spm")));
 int audio_process(struct AudioFX *audioP) {
     int retval = 0;
@@ -1033,7 +1040,9 @@ int audio_process(struct AudioFX *audioP) {
                     audioIn(audioP, xP);
                 }
             }
-            //PROCESS PPSR TIMES
+
+            CPUcyclesB[CPUcyclesCount] = get_cpu_cycles();
+
             switch(*audioP->fx) {
             case DRY:
                 for(unsigned int i=0; i < *audioP->ppsr; i++) {
@@ -1110,6 +1119,18 @@ int audio_process(struct AudioFX *audioP) {
                 printf("effect not implemented yet\n");
                 break;
             }
+
+            CPUcyclesE[CPUcyclesCount] = get_cpu_cycles();
+            if(CPUcyclesCount < CPU_CYCLES_LIMIT) {
+                CPUcyclesCount++;
+                if(CPUcyclesCount == CPU_CYCLES_LIMIT) {
+                    for(int i=0; i<CPU_CYCLES_LIMIT; i++) {
+                        unsigned int diff = CPUcyclesE[i] - CPUcyclesB[i];
+                        printf("i=%d: diff=%u\n", i, diff);
+                    }
+                }
+            }
+
             //ACKNOWLEDGE ONCE AFTER PROCESSING
             if(*audioP->in_con == NOC) {
                 if(mp_ack((qpd_t *)*audioP->recvChanP, TIMEOUT) == 0) {
