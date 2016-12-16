@@ -6,7 +6,7 @@ const int LIM = 1000;
 const int NOC_MASTER = 0;
 
 
-const int CPU_CYCLES_LIMIT = 1000;
+const int CPU_CYCLES_LIMIT = 800;
 
 void threadFunc(void* args) {
     volatile _UNCACHED int **inArgs = (volatile _UNCACHED int **) args;
