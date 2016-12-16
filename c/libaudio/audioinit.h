@@ -92,9 +92,9 @@ const int AUDIO_CORES = 2;
 const int FX_AMOUNT = 3;
 // FX_ID | CORE | FX_TYPE | XB_SIZE | YB_SIZE | P (S) | IN_TYPE | OUT_TYPE | FROM_ID | TO_ID //
 const int FX_SCHED[FX_AMOUNT][10] = {
-    {0, 0, 0, 2, 2, 1, 0, 1, -1,  0},
-    {1, 1, 12, 2, 2, 1, 1, 1,  0,  1},
-    {2, 0, 0, 2, 2, 1, 1, 0,  1, -1}
+    {0, 0, 0, 8, 8, 1, 0, 1, -1,  0},
+    {1, 1, 12, 8, 8, 1, 1, 1,  0,  1},
+    {2, 0, 0, 8, 8, 1, 1, 0,  1, -1}
 };
 //amount of NoC channels
 const int CHAN_AMOUNT = 2;
