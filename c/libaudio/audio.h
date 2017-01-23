@@ -190,7 +190,7 @@ int audio_connect_to_core(struct AudioFX *srcP, const unsigned int sendChanID, u
 int audio_connect_from_core(const unsigned int recvChanID, struct AudioFX *dstP, unsigned int r_ind);
 
 //audio processing
-int audio_process(struct AudioFX *audioP); // __attribute__((section("text.spm")));
+int audio_process(struct AudioFX *audioP, int debugNumba); // __attribute__((section("text.spm")));
 
 
 
@@ -341,12 +341,5 @@ struct WahWah {
     short (*a_array)[WAHWAH_P]; //for A coefficients: a_array[3][WAHWAH_P]
     short (*b_array)[WAHWAH_P]; //for B coefficients: b_array[3][WAHWAH_p]
 };
-
-//just to test parallel chains
-#define DEBUGGA_LEN 3
-int debugga_table[DEBUGGA_LEN] = {654, -2053, 2396};
-int debugga_ind = 0;
-
-
 
 #endif /* _AUDIO_H_ */

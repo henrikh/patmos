@@ -221,12 +221,11 @@ int setOutputBufferSPM(volatile _SPM short *l, volatile _SPM short *r) {
 /*            AUDIO EFFECT FUNCTIONS          */
 
 
-void audioIn(struct AudioFX *audioP, volatile _SPM short *xP) {
+void audioIn(struct AudioFX *audioP, volatile _SPM short *xP, int debugNumba) {
     for(unsigned int i=0; i < *audioP->xb_size; i++) {
         //getInputBufferSPM(&xP[i*2], &xP[i*2+1]);
-        xP[i*2]   = debugga_table[debugga_ind];
-        xP[i*2+1] = debugga_table[debugga_ind] + 10;
-        debugga_ind = debugga_ind % DEBUGGA_LEN;
+        xP[i*2]   = debugNumba;
+        xP[i*2+1] = ((debugNumba/3) - 22) * 3 ;
         printf("audio IN: %d, %d\n", xP[i*2], xP[i*2+1]);
     }
 }
@@ -994,7 +993,7 @@ const int TIMEOUT = 10000;  // timeout ~512 samples
 //const int TIMEOUT = 0xFFFFF;
 
 //int audio_process(struct AudioFX *audioP) __attribute__((section("text.spm")));
-int audio_process(struct AudioFX *audioP) {
+int audio_process(struct AudioFX *audioP, int debugNumba) {
     int retval = 0;
     /* ---------X and Y locations----------- */
     volatile _SPM short * xP;
@@ -1047,7 +1046,7 @@ int audio_process(struct AudioFX *audioP) {
             }
             else { //same core
                 if( (*audioP->cpuid == 0) && (*audioP->in_con == FIRST) ) {
-                    audioIn(audioP, xP);
+                    audioIn(audioP, xP, debugNumba);
                 }
             }
             //PROCESS Nf TIMES

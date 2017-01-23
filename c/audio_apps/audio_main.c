@@ -223,7 +223,7 @@ void threadFunc(void* args) {
         }
 
         for(int n=0; n<FX_HERE[*cmode_spm]; n++) {
-            audio_process(&FXp[*cmode_spm][n]);
+            audio_process(&FXp[*cmode_spm][n], 0);
         }
 
     }
@@ -361,6 +361,10 @@ int main() {
         }
     }
 
+    //only for parallel test chain
+    int debugaTalba[3] = {4376, -15224, 24327};
+    int debugNumba = 0;
+
     //CPU cycles stuff
     int CPUcycles[LIM] = {0};
     unsigned int cpu_pnt = 0;
@@ -461,10 +465,13 @@ int main() {
 
 
             printf("******* ITERATION %d *******\n", cpu_pnt);
+            printf("********** MODE %d *********\n", *cmode_spm);
 
             for(int n=0; n<FX_HERE[*cmode_spm]; n++) {
-                audio_process(&FXp[*cmode_spm][n]);
+                audio_process(&FXp[*cmode_spm][n], debugaTalba[debugNumba]);
             }
+
+            debugNumba = (debugNumba + 1) % 3;
 
             //printf("in: %d, %d       out: %d, %d    %d, %d\n", FXp[0].x[0], FXp[0].x[1], FXp[FX_HERE-1].x[0], FXp[FX_HERE-1].x[1], FXp[FX_HERE-1].y[0], FXp[FX_HERE-1].y[1]);
 
