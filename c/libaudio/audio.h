@@ -342,5 +342,11 @@ struct WahWah {
     short (*b_array)[WAHWAH_P]; //for B coefficients: b_array[3][WAHWAH_p]
 };
 
+//just to test parallel chains
+#define DEBUGGA_LEN 3
+int debugga_table[DEBUGGA_LEN] = {654, -2053, 2396};
+int debugga_ind = 0;
+
+
 
 #endif /* _AUDIO_H_ */

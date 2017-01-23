@@ -460,7 +460,7 @@ int main() {
             *keyReg_prev = *keyReg;
 
 
-            //printf("******* ITERATION %d *******\n", cpu_pnt);
+            printf("******* ITERATION %d *******\n", cpu_pnt);
 
             for(int n=0; n<FX_HERE[*cmode_spm]; n++) {
                 audio_process(&FXp[*cmode_spm][n]);

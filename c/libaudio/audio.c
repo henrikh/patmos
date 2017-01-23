@@ -223,15 +223,18 @@ int setOutputBufferSPM(volatile _SPM short *l, volatile _SPM short *r) {
 
 void audioIn(struct AudioFX *audioP, volatile _SPM short *xP) {
     for(unsigned int i=0; i < *audioP->xb_size; i++) {
-        getInputBufferSPM(&xP[i*2], &xP[i*2+1]);
-        //printf("audio IN: %d, %d\n", xP[i*2], xP[i*2+1]);
+        //getInputBufferSPM(&xP[i*2], &xP[i*2+1]);
+        xP[i*2]   = debugga_table[debugga_ind];
+        xP[i*2+1] = debugga_table[debugga_ind] + 10;
+        debugga_ind = debugga_ind % DEBUGGA_LEN;
+        printf("audio IN: %d, %d\n", xP[i*2], xP[i*2+1]);
     }
 }
 
 void audioOut(struct AudioFX *audioP, volatile _SPM short *yP) {
     for(unsigned int i=0; i < *audioP->yb_size; i++) {
         setOutputBufferSPM(&yP[i*2], &yP[i*2+1]);
-        //printf("audio OUT: %d, %d\n", yP[i*2], yP[i*2+1]);
+        printf("audio OUT: %d, %d\n", yP[i*2], yP[i*2+1]);
     }
 }
 
