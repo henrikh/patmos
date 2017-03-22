@@ -15,13 +15,16 @@ import Chisel._
 
 import ocp._
 
+import io._
+
 /**
  * This is a very basic ALU example.
  */
-class SSPM extends Module {
-  val io = new OcpIOSlavePort(32, 32)
+class SSPM extends CoreDevice() {
 
-  io.S.Data := io.M.Data
+  override val io = new CoreDeviceIO()
+
+  io.ocp.S.Data := io.ocp.M.Data
 }
 
 /**
@@ -37,8 +40,8 @@ class SSPMTop extends Module {
   val sspm = Module(new SSPM())
 
   // Map switches to the ALU input ports
-  sspm.io.M.Data := io.in
-  io.out := sspm.io.S.Data
+  sspm.io.ocp.M.Data := io.in
+  io.out := sspm.io.ocp.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -55,9 +58,9 @@ object SSPMMain {
  */
 class SSPMTester(dut: SSPM) extends Tester(dut) {
 
-  poke(dut.io.M.Data, 42)
+  poke(dut.io.ocp.M.Data, 42)
   step(1)
-  expect(dut.io.S.Data, 42)
+  expect(dut.io.ocp.S.Data, 42)
 }
 
 object SSPMTester {
