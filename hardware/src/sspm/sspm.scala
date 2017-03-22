@@ -13,36 +13,15 @@ package sspm
 
 import Chisel._
 
+import ocp._
+
 /**
  * This is a very basic ALU example.
  */
 class SSPM extends Module {
-  val io = new Bundle {
-    val fn = UInt(INPUT, 2)
-    val a = UInt(INPUT, 4)
-    val b = UInt(INPUT, 4)
-    val result = UInt(OUTPUT, 4)
-  }
+  val io = new OcpIOSlavePort(32, 32)
 
-  // Use shorter variable names
-  val fn = io.fn
-  val a = io.a
-  val b = io.b
-
-  val result = UInt(width = 4)
-  // some default value is needed
-  result := UInt(0)
-
-  // The ALU selection
-  switch(fn) {
-    is(UInt(0)) { result := a + b }
-    is(UInt(1)) { result := a - b }
-    is(UInt(2)) { result := a | b }
-    is(UInt(3)) { result := a & b }
-  }
-
-  // Output on the LEDs (with zero extension)
-  io.result := result
+  io.S.Data := io.M.Data
 }
 
 /**
@@ -51,19 +30,15 @@ class SSPM extends Module {
  */
 class SSPMTop extends Module {
   val io = new Bundle {
-    val sw = UInt(INPUT, 10)
-    val led = UInt(OUTPUT, 10)
+    val in = UInt(INPUT, 32)
+    val out = UInt(OUTPUT, 32)
   }
 
-  val alu = Module(new SSPM())
+  val sspm = Module(new SSPM())
 
   // Map switches to the ALU input ports
-  alu.io.fn := io.sw(1, 0)
-  alu.io.a := io.sw(5, 2)
-  alu.io.b := io.sw(9, 6)
-
-  // And the result to the LEDs (with 0 extension)
-  io.led := alu.io.result
+  sspm.io.M.Data := io.in
+  io.out := sspm.io.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -80,27 +55,9 @@ object SSPMMain {
  */
 class SSPMTester(dut: SSPM) extends Tester(dut) {
 
-  // This is exhaustive testing, which usually is not possible
-  for (a <- 0 to 15) {
-    for (b <- 0 to 15) {
-      for (op <- 0 to 3) {
-        val result =
-          op match {
-            case 0 => a + b
-            case 1 => a - b
-            case 2 => a | b
-            case 3 => a & b
-          }
-        val resMask = result & 0x0f
-
-        poke(dut.io.fn, op)
-        poke(dut.io.a, a)
-        poke(dut.io.b, b)
-        step(1)
-        expect(dut.io.result, resMask)
-      }
-    }
-  }
+  poke(dut.io.M.Data, 42)
+  step(1)
+  expect(dut.io.S.Data, 42)
 }
 
 object SSPMTester {
