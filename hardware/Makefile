@@ -176,3 +176,11 @@ modcomp:
 .FORCE:
 
 .PHONY: all emulator test view verilog vsim
+
+# SSPM make targets
+
+SSPM:
+	$(SBT) "run-main sspm.SSPMMain"
+
+SSPM-test:
+	$(SBT) "run-main sspm.SSPMTester"
