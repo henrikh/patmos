@@ -47,7 +47,7 @@ class SSPMTop extends Module {
 // Generate the Verilog code by invoking chiselMain() in our main()
 object SSPMMain {
   def main(args: Array[String]): Unit = {
-    println("Generating the ALU hardware")
+    println("Generating the SSPM hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
       () => Module(new SSPMTop()))
   }
