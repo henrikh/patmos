@@ -17,14 +17,34 @@ import ocp._
 
 import io._
 
+trait SSPMBackbone {
+  val backbone = new Bundle() {
+    val inbound = UInt(OUTPUT, 32)
+    val outbound = UInt(INPUT, 32)
+  }
+}
+
 /**
- * This is a very basic ALU example.
+ * The basic SSPM
  */
-class SSPM extends CoreDevice() {
+class SSPMMemory extends Module() {
+  val io = new Bundle {
+    val in = UInt(OUTPUT, 32)
+    val out = UInt(INPUT, 32)
+  }
 
-  override val io = new CoreDeviceIO()
+  io.out := io.in
+}
 
-  io.ocp.S.Data := io.ocp.M.Data
+/**
+ * The connector for each OCP bus
+ */
+class SSPMConnector extends CoreDevice() {
+
+  override val io = new CoreDeviceIO() with SSPMBackbone
+
+  io.backbone.inbound := io.ocp.M.Data
+  io.ocp.S.Data := io.backbone.outbound
 }
 
 /**
@@ -37,10 +57,11 @@ class SSPMTop extends Module {
     val out = Vec.fill(3) {UInt(OUTPUT, 32)}
   }
 
-  val sspms = Vec.fill(3) { Module(new SSPM()).io }
+  val sspms = Vec.fill(3) { Module(new SSPMConnector()).io }
 
   for (j <- 0 until 3) {
     sspms(j).ocp.M.Data := io.in(j)
+    sspms(j).backbone.outbound := sspms(j).backbone.inbound
     io.out(j) := sspms(j).ocp.S.Data
   }
 }
