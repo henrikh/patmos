@@ -33,21 +33,16 @@ class SSPM extends CoreDevice() {
  */
 class SSPMTop extends Module {
   val io = new Bundle {
-    val in = UInt(INPUT, 32)
-    val out = UInt(OUTPUT, 32)
+    val in = Vec.fill(3) {UInt(INPUT, 32)}
+    val out = Vec.fill(3) {UInt(OUTPUT, 32)}
   }
 
-  val sspms = new Array[Module](3)
+  val sspms = Vec.fill(3) { Module(new SSPM()).io }
 
   for (j <- 0 until 3) {
-    sspms(j) = Module(new SSPM())
+    sspms(j).ocp.M.Data := io.in(j)
+    io.out(j) := sspms(j).ocp.S.Data
   }
-
-  val sspm = Module(new SSPM())
-
-  // Map switches to the ALU input ports
-  sspm.io.ocp.M.Data := io.in
-  io.out := sspm.io.ocp.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
