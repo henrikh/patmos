@@ -51,15 +51,15 @@ class SSPMConnector extends CoreDevice() {
  * A top level to wire FPGA buttons and LEDs
  * to the ALU input and output.
  */
-class SSPMTop extends Module {
+class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
-    val in = Vec.fill(3) {UInt(INPUT, 32)}
-    val out = Vec.fill(3) {UInt(OUTPUT, 32)}
+    val in = Vec.fill(nConnectors) {UInt(INPUT, 32)}
+    val out = Vec.fill(nConnectors) {UInt(OUTPUT, 32)}
   }
 
-  val sspms = Vec.fill(3) { Module(new SSPMConnector()).io }
+  val sspms = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
 
-  for (j <- 0 until 3) {
+  for (j <- 0 until nConnectors) {
     sspms(j).ocp.M.Data := io.in(j)
     sspms(j).backbone.outbound := sspms(j).backbone.inbound
     io.out(j) := sspms(j).ocp.S.Data
@@ -71,7 +71,7 @@ object SSPMMain {
   def main(args: Array[String]): Unit = {
     println("Generating the SSPM hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new SSPMTop()))
+      () => Module(new SSPMTop(3)))
   }
 }
 
@@ -92,7 +92,7 @@ object SSPMTester {
     println("Testing the SSPM")
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new SSPMTop())) {
+      () => Module(new SSPMTop(3))) {
         f => new SSPMTester(f)
       }
   }
