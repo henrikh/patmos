@@ -81,9 +81,14 @@ object SSPMMain {
 class SSPMTester(dut: SSPMTop) extends Tester(dut) {
 
   for (j <- 0 until 3) {
-    poke(dut.io.in(j), 42)
+    poke(dut.io.in(j), j)
+  }
+  step(1)
+
+  for (j <- 0 until 3) {
+    poke(dut.io.select, j)
     step(1)
-    expect(dut.io.out(j), 42)
+    expect(dut.io.out, j)
   }
 }
 
