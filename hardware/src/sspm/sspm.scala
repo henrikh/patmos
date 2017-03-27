@@ -57,11 +57,13 @@ object SSPMMain {
 /**
  * Test the SSPM design
  */
-class SSPMTester(dut: SSPM) extends Tester(dut) {
+class SSPMTester(dut: SSPMTop) extends Tester(dut) {
 
-  poke(dut.io.ocp.M.Data, 42)
-  step(1)
-  expect(dut.io.ocp.S.Data, 42)
+  for (j <- 0 until 3) {
+    poke(dut.io.in(j), 42)
+    step(1)
+    expect(dut.io.out(j), 42)
+  }
 }
 
 object SSPMTester {
@@ -69,7 +71,7 @@ object SSPMTester {
     println("Testing the SSPM")
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new SSPM())) {
+      () => Module(new SSPMTop())) {
         f => new SSPMTester(f)
       }
   }
