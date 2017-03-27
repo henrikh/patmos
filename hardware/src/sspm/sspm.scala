@@ -54,7 +54,9 @@ class SSPMConnector extends CoreDevice() {
 class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
     val in = Vec.fill(nConnectors) {UInt(INPUT, 32)}
-    val out = Vec.fill(nConnectors) {UInt(OUTPUT, 32)}
+    val out = UInt(OUTPUT, 32)
+    val select = UInt(INPUT,
+      (scala.math.ceil(scala.math.log(nConnectors)/scala.math.log(2))).toInt)
   }
 
   val sspms = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
@@ -62,8 +64,9 @@ class SSPMTop(val nConnectors: Int) extends Module {
   for (j <- 0 until nConnectors) {
     sspms(j).ocp.M.Data := io.in(j)
     sspms(j).backbone.outbound := sspms(j).backbone.inbound
-    io.out(j) := sspms(j).ocp.S.Data
   }
+
+  io.out := sspms(io.select).ocp.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
