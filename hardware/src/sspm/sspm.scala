@@ -37,6 +37,12 @@ class SSPMTop extends Module {
     val out = UInt(OUTPUT, 32)
   }
 
+  val sspms = new Array[Module](3)
+
+  for (j <- 0 until 3) {
+    sspms(j) = Module(new SSPM())
+  }
+
   val sspm = Module(new SSPM())
 
   // Map switches to the ALU input ports
