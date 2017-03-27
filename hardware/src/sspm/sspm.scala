@@ -13,6 +13,8 @@ package sspm
 
 import Chisel._
 
+import patmos.Constants._
+
 import ocp._
 
 import io._
@@ -58,9 +60,7 @@ class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
     val in = Vec.fill(nConnectors) {UInt(INPUT, 32)}
     val out = UInt(OUTPUT, 32)
-    val select = UInt(INPUT,
-      // Ensure select statement has enough bits to address all connectors
-      (scala.math.ceil(scala.math.log(nConnectors)/scala.math.log(2))).toInt)
+    val select = UInt(INPUT, log2Up(nConnectors))
   }
 
   // Vector for each connector
