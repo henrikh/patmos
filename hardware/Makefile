@@ -184,3 +184,9 @@ SSPM:
 
 SSPM-test:
 	$(SBT) "run-main sspm.SSPMTester"
+
+SSPM-scheduler:
+	$(SBT) "run-main sspm.SchedulerMain"
+
+SSPM-scheduler-test:
+	$(SBT) "run-main sspm.SchedulerTester"
