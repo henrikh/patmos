@@ -17,6 +17,9 @@ import ocp._
 
 import io._
 
+/**
+ * Connection between SSPMConnector and the SSPM
+ */
 trait SSPMBackbone {
   val backbone = new Bundle() {
     val inbound = UInt(OUTPUT, 32)
@@ -27,7 +30,7 @@ trait SSPMBackbone {
 /**
  * The basic SSPM
  */
-class SSPMMemory extends Module() {
+class SPMemory extends Module() {
   val io = new Bundle {
     val in = UInt(OUTPUT, 32)
     val out = UInt(INPUT, 32)
@@ -41,6 +44,7 @@ class SSPMMemory extends Module() {
  */
 class SSPMConnector extends CoreDevice() {
 
+  // OCP pins and SSPMBackbone pins
   override val io = new CoreDeviceIO() with SSPMBackbone
 
   io.backbone.inbound := io.ocp.M.Data
@@ -48,24 +52,27 @@ class SSPMConnector extends CoreDevice() {
 }
 
 /**
- * A top level to wire FPGA buttons and LEDs
- * to the ALU input and output.
+ * A top level of SSPM
  */
 class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
     val in = Vec.fill(nConnectors) {UInt(INPUT, 32)}
     val out = UInt(OUTPUT, 32)
     val select = UInt(INPUT,
+      // Ensure select statement has enough bits to address all connectors
       (scala.math.ceil(scala.math.log(nConnectors)/scala.math.log(2))).toInt)
   }
 
+  // Vector for each connector
   val sspms = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
 
+  // Connector the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
     sspms(j).ocp.M.Data := io.in(j)
     sspms(j).backbone.outbound := sspms(j).backbone.inbound
   }
 
+  // Select which SSPMConnector has access to the SPM
   io.out := sspms(io.select).ocp.S.Data
 }
 
