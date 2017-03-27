@@ -36,6 +36,7 @@ class SPMemory extends Module() {
   val io = new Bundle {
     val in = UInt(OUTPUT, 32)
     val out = UInt(INPUT, 32)
+    val writeEnable = Bits(INPUT, 1)
   }
 
   io.out := io.in
