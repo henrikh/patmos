@@ -24,8 +24,8 @@ import io._
  */
 trait SSPMBackbone {
   val backbone = new Bundle() {
-    val inbound = UInt(OUTPUT, 32)
-    val outbound = UInt(INPUT, 32)
+    val inbound = UInt(OUTPUT, DATA_WIDTH)
+    val outbound = UInt(INPUT, DATA_WIDTH)
   }
 }
 
@@ -58,8 +58,8 @@ class SSPMConnector extends CoreDevice() {
  */
 class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
-    val in = Vec.fill(nConnectors) {UInt(INPUT, 32)}
-    val out = UInt(OUTPUT, 32)
+    val in = Vec.fill(nConnectors) {UInt(INPUT, DATA_WIDTH)}
+    val out = UInt(OUTPUT, DATA_WIDTH)
     val select = UInt(INPUT, log2Up(nConnectors))
   }
 
