@@ -190,3 +190,12 @@ SSPM-scheduler:
 
 SSPM-scheduler-test:
 	$(SBT) "run-main sspm.SchedulerTester"
+
+SSPM-connector:
+	$(SBT) "run-main sspm.SSPMConnectorMain"
+
+SSPM-connector-test:
+	$(SBT) "run-main sspm.SSPMConnectorTester"
+
+SSPM-connector-view:
+	gtkwave generated/SSPMConnectorA.vcd --save=SSPMConnectorA.gtkw
