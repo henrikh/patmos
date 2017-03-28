@@ -22,10 +22,19 @@ import io._
 /**
  * Connection between SSPMConnector and the SSPM
  */
-trait SSPMBackbone {
-  val backbone = new Bundle() {
-    val inbound = UInt(OUTPUT, DATA_WIDTH)
-    val outbound = UInt(INPUT, DATA_WIDTH)
+trait SSPMConnectorSignals {
+  val connectorSignals = new Bundle() {
+    val enable = Bits(INPUT, 1)
+
+    val M = new Bundle() {
+       val Data = Bits(OUTPUT, DATA_WIDTH)
+       val Addr = Bits(OUTPUT, ADDR_WIDTH)
+       val MByteEn = Bits(OUTPUT, 4)
+    }
+
+    val S = new Bundle() {
+       val Data = UInt(INPUT, DATA_WIDTH)
+    }
   }
 }
 
@@ -40,18 +49,6 @@ class SPMemory extends Module() {
   }
 
   io.out := io.in
-}
-
-/**
- * The connector for each OCP bus
- */
-class SSPMConnector extends IODevice() {
-
-  // OCP pins and SSPMBackbone pins
-  override val io = new IODeviceIO() with SSPMBackbone
-
-  io.backbone.inbound := io.ocp.M.Data
-  io.ocp.S.Data := io.backbone.outbound
 }
 
 /**
@@ -70,7 +67,7 @@ class SSPMTop(val nConnectors: Int) extends Module {
   // Connector the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
     sspms(j).ocp.M.Data := io.in(j)
-    sspms(j).backbone.outbound := sspms(j).backbone.inbound
+    sspms(j).connectorSignals.S.Data := sspms(j).connectorSignals.M.Data
   }
 
   // Select which SSPMConnector has access to the SPM
