@@ -29,7 +29,7 @@ trait SSPMConnectorSignals {
     val M = new Bundle() {
        val Data = Bits(OUTPUT, DATA_WIDTH)
        val Addr = Bits(OUTPUT, ADDR_WIDTH)
-       val MByteEn = Bits(OUTPUT, 4)
+       val ByteEn = Bits(OUTPUT, 4)
     }
 
     val S = new Bundle() {
