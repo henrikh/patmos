@@ -198,4 +198,4 @@ SSPM-connector-test:
 	$(SBT) "run-main sspm.SSPMConnectorTester"
 
 SSPM-connector-view:
-	gtkwave generated/SSPMConnectorA.vcd --save=SSPMConnectorA.gtkw
+	gtkwave generated/SSPMConnector.vcd --save=SSPMConnector.gtkw
