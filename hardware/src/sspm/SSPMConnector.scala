@@ -63,6 +63,28 @@ object SSPMConnectorMain {
  */
 class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
+  // Write test
+  //step(1)
+
+  poke(dut.io.ocp.M.Cmd, OcpCmd.WR.litValue())
+  poke(dut.io.ocp.M.Addr, 1)
+  poke(dut.io.ocp.M.Data, 42)
+  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+  expect(dut.io.connectorSignals.M.Addr, 1)
+
+  expect(dut.io.connectorSignals.M.Data, 42)
+
+  expect(dut.io.ocp.S.Resp, 1)
+  expect(dut.io.ocp.S.CmdAccept, 1)
+
+  // Read test
+
   poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
   poke(dut.io.ocp.M.Addr, 1)
   poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
@@ -80,6 +102,19 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   expect(dut.io.ocp.S.CmdAccept, 1)
   expect(dut.io.ocp.S.Data, 42)
 
+  // Idle test
+  step(1)
+
+  poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
+  poke(dut.io.ocp.M.Addr, 1)
+  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+
+  expect(dut.io.ocp.S.Resp, 0)
+  expect(dut.io.ocp.S.CmdAccept, 0)
 }
 
 object SSPMConnectorTester {
