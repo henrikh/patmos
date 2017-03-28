@@ -45,10 +45,10 @@ class SPMemory extends Module() {
 /**
  * The connector for each OCP bus
  */
-class SSPMConnector extends CoreDevice() {
+class SSPMConnector extends IODevice() {
 
   // OCP pins and SSPMBackbone pins
-  override val io = new CoreDeviceIO() with SSPMBackbone
+  override val io = new IODeviceIO() with SSPMBackbone
 
   io.backbone.inbound := io.ocp.M.Data
   io.ocp.S.Data := io.backbone.outbound
