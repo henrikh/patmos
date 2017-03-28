@@ -56,7 +56,7 @@ import Constants._
 
 import ocp._
 
-class SpmShared(size: Int) extends Module {
+class SSPMMemory(size: Int) extends Module {
   val io = new OcpCoreSlavePort(log2Up(size), DATA_WIDTH)
 
   val addrBits = log2Up(size / BYTES_PER_WORD)
