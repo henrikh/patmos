@@ -1,20 +1,20 @@
-module memSPM(input clk, input reset,
-    input [31:0] io_M_Data,
-    input [15:0] io_M_Addr,
-    input [3:0] io_M_ByteEn,
+module memModule(input clk, input reset,
+    input [7:0] io_M_Data,
+    input [7:0] io_M_Addr,
+    input  io_M_blockEnable,
     input  io_M_We,
-    output[31:0] io_S_Data
+    output[7:0] io_S_Data
 );
 
-  wire[31:0] T0;
-  reg [31:0] dataReg;
-  wire[31:0] T1;
-  reg [31:0] syncMem [127:0];
-  wire[31:0] T2;
+  wire[7:0] T0;
+  reg [7:0] dataReg;
+  wire[7:0] T1;
+  reg [7:0] syncMem [255:0];
+  wire[7:0] T2;
   wire T3;
-  wire[6:0] T5;
-  wire[6:0] T6;
   wire T4;
+  wire T5;
+  wire T6;
 
 `ifndef SYNTHESIS
 // synthesis translate_off
@@ -22,24 +22,91 @@ module memSPM(input clk, input reset,
   initial begin
     #0.002;
     dataReg = {1{$random}};
-    for (initvar = 0; initvar < 128; initvar = initvar+1)
+    for (initvar = 0; initvar < 256; initvar = initvar+1)
       syncMem[initvar] = {1{$random}};
   end
 // synthesis translate_on
 `endif
 
   assign io_S_Data = T0;
-  assign T0 = T4 ? T1 : dataReg;
-  assign T1 = syncMem[T6];
-  assign T3 = io_M_We == 1'h1;
-  assign T5 = io_M_Addr[3'h6:1'h0];
-  assign T6 = io_M_Addr[3'h6:1'h0];
-  assign T4 = T3 ^ 1'h1;
+  assign T0 = T6 ? T1 : dataReg;
+  assign T1 = syncMem[io_M_Addr];
+  assign T3 = T5 & T4;
+  assign T4 = io_M_blockEnable == 1'h1;
+  assign T5 = io_M_We == 1'h1;
+  assign T6 = T3 ^ 1'h1;
 
   always @(posedge clk) begin
-    dataReg <= 32'h0;
+    dataReg <= 8'h0;
     if (T3)
-      syncMem[T5] <= io_M_Data;
+      syncMem[io_M_Addr] <= io_M_Data;
   end
+endmodule
+
+module memSPM(input clk, input reset,
+    input [31:0] io_M_Data,
+    input [7:0] io_M_Addr,
+    input [3:0] io_M_ByteEn,
+    input  io_M_We,
+    output[31:0] io_S_Data
+);
+
+  wire T0;
+  wire[7:0] T1;
+  wire T2;
+  wire[7:0] T3;
+  wire T4;
+  wire[7:0] T5;
+  wire T6;
+  wire[7:0] T7;
+  wire[31:0] T8;
+  wire[15:0] T9;
+  wire[15:0] T10;
+  wire[7:0] memModule_io_S_Data;
+  wire[7:0] memModule_1_io_S_Data;
+  wire[7:0] memModule_2_io_S_Data;
+  wire[7:0] memModule_3_io_S_Data;
+
+
+  assign T0 = io_M_ByteEn[2'h3:2'h3];
+  assign T1 = io_M_Data[5'h1f:5'h18];
+  assign T2 = io_M_ByteEn[2'h2:2'h2];
+  assign T3 = io_M_Data[5'h17:5'h10];
+  assign T4 = io_M_ByteEn[1'h1:1'h1];
+  assign T5 = io_M_Data[4'hf:4'h8];
+  assign T6 = io_M_ByteEn[1'h0:1'h0];
+  assign T7 = io_M_Data[3'h7:1'h0];
+  assign io_S_Data = T8;
+  assign T8 = {T10, T9};
+  assign T9 = {memModule_1_io_S_Data, memModule_io_S_Data};
+  assign T10 = {memModule_3_io_S_Data, memModule_2_io_S_Data};
+  memModule memModule(.clk(clk), .reset(reset),
+       .io_M_Data( T7 ),
+       .io_M_Addr( io_M_Addr ),
+       .io_M_blockEnable( T6 ),
+       .io_M_We( io_M_We ),
+       .io_S_Data( memModule_io_S_Data )
+  );
+  memModule memModule_1(.clk(clk), .reset(reset),
+       .io_M_Data( T5 ),
+       .io_M_Addr( io_M_Addr ),
+       .io_M_blockEnable( T4 ),
+       .io_M_We( io_M_We ),
+       .io_S_Data( memModule_1_io_S_Data )
+  );
+  memModule memModule_2(.clk(clk), .reset(reset),
+       .io_M_Data( T3 ),
+       .io_M_Addr( io_M_Addr ),
+       .io_M_blockEnable( T2 ),
+       .io_M_We( io_M_We ),
+       .io_S_Data( memModule_2_io_S_Data )
+  );
+  memModule memModule_3(.clk(clk), .reset(reset),
+       .io_M_Data( T1 ),
+       .io_M_Addr( io_M_Addr ),
+       .io_M_blockEnable( T0 ),
+       .io_M_We( io_M_We ),
+       .io_S_Data( memModule_3_io_S_Data )
+  );
 endmodule
 
