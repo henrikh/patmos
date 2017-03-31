@@ -64,7 +64,7 @@ class memModule(size: Int) extends Module {
 
     val M = new Bundle() {
        val Data = UInt(INPUT, BYTE_WIDTH)
-       val Addr = UInt(INPUT, log2Up(size / BYTES_PER_WORD))
+       val Addr = UInt(INPUT, log2Up(size / BYTES_PER_WORD)-2)
        val blockEnable = UInt(INPUT, 1) // From byte enable
        val We = UInt(INPUT, 1)    
     }
@@ -189,8 +189,8 @@ class  memSPM(size: Int) extends Module {
 
   // Connect memories with the SSPM
   for (j <- 0 until 4) {
-    memories(j).M.Data := io.M.Data((j+1)*8-1, j*8)
-    memories(j).M.Addr := io.M.Addr
+    memories(j).M.Data := io.M.Data((j+1)*BYTE_WIDTH-1, j*BYTE_WIDTH)
+    memories(j).M.Addr := io.M.Addr(addrBits - 1, 2)
     memories(j).M.blockEnable := io.M.ByteEn(j)
     memories(j).M.We := io.M.We
     //This would be the preffered way, but Chisel3 does not support subword assignment for outputs?

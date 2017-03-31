@@ -12,9 +12,9 @@ class memModule_t : public mod_t {
   dat_t<1> memModule__io_M_blockEnable;
   dat_t<1> memModule__io_M_We;
   dat_t<1> T2;
+  dat_t<6> memModule__io_M_Addr;
   dat_t<8> memModule__io_M_Data;
-  dat_t<8> memModule__io_M_Addr;
-  dat_t<8> memModule__dataReg;
+  dat_t<8> T3;
   dat_t<8> memModule__io_S_Data;
   mem_t<8,256> memModule__syncMem;
   clk_t clk;
