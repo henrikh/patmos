@@ -49,6 +49,8 @@ import ocp._
 import util._
 import io.CoreDevice
 
+import sspm._
+
 import java.lang.Integer
 
 class InOut() extends Module {
@@ -57,12 +59,13 @@ class InOut() extends Module {
   // Compute selects
   val selIO = io.memInOut.M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-4) === Bits("b1111")
   val selNI = io.memInOut.M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-4) === Bits("b1110")
+  val selSSPM = io.memInOut.M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-4) === Bits("b1101")
 
-  val selISpm = !selIO & !selNI & io.memInOut.M.Addr(ISPM_ONE_BIT) === Bits(0x1)
-  val selSpm = !selIO & !selNI & io.memInOut.M.Addr(ISPM_ONE_BIT) === Bits(0x0)
+  val selISpm = !selIO & !selNI & !selSSPM & io.memInOut.M.Addr(ISPM_ONE_BIT) === Bits(0x1)
+  val selSpm = !selIO & !selNI & !selSSPM & io.memInOut.M.Addr(ISPM_ONE_BIT) === Bits(0x0)
 
-  val selComConf = selNI & io.memInOut.M.Addr(ADDR_WIDTH-5) === Bits("b0")
-  val selComSpm  = selNI & io.memInOut.M.Addr(ADDR_WIDTH-5) === Bits("b1")
+  val selComConf = selNI & !selSSPM & io.memInOut.M.Addr(ADDR_WIDTH-5) === Bits("b0")
+  val selComSpm  = selNI & !selSSPM & io.memInOut.M.Addr(ADDR_WIDTH-5) === Bits("b1")
 
   val MAX_IO_DEVICES : Int = 0x10
   val IO_DEVICE_OFFSET = 16 // Number of address bits for each IO device
@@ -88,12 +91,15 @@ class InOut() extends Module {
   val selComConfReg = Reg(Bool())
   val selComSpmReg = Reg(Bool())
 
+  val selSspmReg = Reg(Bool())
+
   val selDeviceReg = Vec.fill(MAX_IO_DEVICES) { Reg(Bool()) }
 
   when(io.memInOut.M.Cmd =/= OcpCmd.IDLE) {
     selSpmReg := selSpm
     selComConfReg := selComConf
     selComSpmReg := selComSpm
+    selSspmReg := selSSPM
 
     selDeviceReg := selDeviceVec
   }
@@ -135,6 +141,11 @@ class InOut() extends Module {
   io.comSpm.M := io.memInOut.M
   io.comSpm.M.Cmd := Mux(selComSpm, io.memInOut.M.Cmd, OcpCmd.IDLE)
   val comSpmS = io.comSpm.S
+
+  // Shared Scratch-pad memory configuration and setup
+  val SSPM = Module(new SSPMConnector())
+  SSPM.io.ocp.M := io.memInOut.M
+  SSPM.io.ocp.M.Cmd := Mux(selSSPM, io.memInOut.M.Cmd, OcpCmd.IDLE)
 
   // Creation of IO devices
   for (devConf <- Config.getConfig.Devs) {
