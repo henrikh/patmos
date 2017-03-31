@@ -142,10 +142,16 @@ class InOut() extends Module {
     validDeviceVec(devConf.offset) := Bool(true)
     // connect ports
     dev.io.ocp.M := io.memInOut.M
+
+    // Direct commands towards the right device, based upon offset
     dev.io.ocp.M.Cmd := Mux(selDeviceVec(devConf.offset), io.memInOut.M.Cmd, OcpCmd.IDLE)
+
     dev.io.superMode <> io.superMode
     dev.io.internalPort <> io.internalIO
+
+    // Store the slave interface
     deviceSVec(devConf.offset) := dev.io.ocp.S
+
     Config.connectIOPins(devConf.name, io, dev.io)
     Config.connectIntrPins(devConf, io, dev.io)
   }
