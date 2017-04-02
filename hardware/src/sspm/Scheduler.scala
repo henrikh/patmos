@@ -5,7 +5,9 @@
  *
  * The scheduler for a shared scratch-pad memory
  *
- * Based upon Martin Schoeberl's ALU example
+ * The scheduler takes the input-flag 'done' which specifies that the prior CPU is done and now wants to give access to the next CPU in the line. 
+ * The output is delayed with one clock cycle based on the register output. 
+ * 
  *
  */
 
@@ -17,45 +19,96 @@ import ocp._
 
 import io._
 
-
 /**
- * A top level of Scheduler
- */
-class Scheduler() extends Module {
+ * A simple Scheduler, configurable counter which updates on done flag.
+ */ 
+class Scheduler(size: Int) extends Module {
   val io = new Bundle {
-    val in = UInt(INPUT, 32)
-    val out = UInt(OUTPUT, 32)
+    val done = Bool(INPUT)
+    val out = UInt(OUTPUT, size)
+  }
+  val r1 = Reg(init = UInt(0, size))
+
+  when (io.done) {
+ 	r1 := r1 + UInt(1)
+	// Does not really make sence, since we want our case to be 3 CPU's. Hence why would we break it at >= 2? might be because it is updating on next rising edge. <- it is! 
+        when ( r1 >= UInt(2) ) {
+		r1 := UInt(0)	
+	}
+  	io.out := r1
+  } .otherwise {
+	io.out := r1
   }
 
-  io.out := io.in
 }
-
 // Generate the Verilog code by invoking chiselMain() in our main()
 object SchedulerMain {
   def main(args: Array[String]): Unit = {
-    println("Generating the SSPM hardware")
+    println("Generating the Scheduler hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new Scheduler()))
+      () => Module(new Scheduler(2)))
   }
 }
 
+
+
 /**
- * Test the Scheduler design
+ * Test the Scheduler by printing out the value at each clock cycle.
  */
 class SchedulerTester(dut: Scheduler) extends Tester(dut) {
-
-  poke(dut.io.in, 42)
+/*
+  for (i <- 0 until 5) {
+    poke(dut.io.done, true)
+    println(i)
+    println(peek(dut.io.out))
+    step(1)
+  }
+ */
+  poke(dut.io.done, false)
+  println(peek(dut.io.out))
   step(1)
-  expect(dut.io.out, 42)
+
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+  
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+
+  poke(dut.io.done, false)
+  println(peek(dut.io.out))
+  step(1)
+  
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+  
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+ 
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+  poke(dut.io.done, true)
+  println(peek(dut.io.out))
+  step(1)
+
 }
 
+/**
+ * Create a Scheduler and a tester.
+ */
 object SchedulerTester {
   def main(args: Array[String]): Unit = {
-    println("Testing the SSPM")
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new Scheduler())) {
-        f => new SchedulerTester(f)
+      () => Module(new Scheduler(2))) {
+        dut => new SchedulerTester(dut)
       }
   }
 }
