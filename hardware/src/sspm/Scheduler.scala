@@ -14,7 +14,7 @@
 package sspm
 
 import Chisel._
-
+import patmos.Constants._
 import ocp._
 
 import io._
@@ -27,7 +27,7 @@ class Scheduler(size: Int) extends Module {
     val done = Bool(INPUT)
     val out = UInt(OUTPUT, size)
   }
-  val r1 = Reg(init = UInt(0, size))
+  val r1 = Reg(init = UInt(0, log2Up(size)))
 
   when (io.done) {
  	r1 := r1 + UInt(1)
@@ -46,7 +46,7 @@ object SchedulerMain {
   def main(args: Array[String]): Unit = {
     println("Generating the Scheduler hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new Scheduler(20)))
+      () => Module(new Scheduler(32)))
   }
 }
 
@@ -57,7 +57,7 @@ object SchedulerMain {
 class SchedulerTester(dut: Scheduler) extends Tester(dut) {
 // Testing that it counts to the size.
   poke(dut.io.done, true)
-  for (i <- 0 until 20) {
+  for (i <- 0 until 32) {
     expect(dut.io.out, i)
     step(1)
   }
@@ -106,7 +106,7 @@ object SchedulerTester {
   def main(args: Array[String]): Unit = {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new Scheduler(20))) {
+      () => Module(new Scheduler(32))) {
         dut => new SchedulerTester(dut)
       }
   }
