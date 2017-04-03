@@ -64,7 +64,7 @@ class SSPMTop(val nConnectors: Int) extends Module {
   // Vector for each connector
   val sspms = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
 
-  // Connector the SSPMConnector with the SSPM
+  // Connect the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
     sspms(j).ocp.M.Data := io.in(j)
     sspms(j).connectorSignals.S.Data := sspms(j).connectorSignals.M.Data
