@@ -58,12 +58,11 @@ class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
     val ocp = Vec.fill(nConnectors) { new IODeviceIO().ocp }
   }
-  val scheduler = Module(new Scheduler(nConnectors))
+
+  // Generate modules
   val mem = Module(new memSPM(64))
-
-  // Vector for each connector
   val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
-
+  val scheduler = Module(new Scheduler(nConnectors))
   val decoder = UIntToOH(scheduler.io.out, nConnectors)
 
   // Connect the SSPMConnector with the SSPM
@@ -74,7 +73,6 @@ class SSPMTop(val nConnectors: Int) extends Module {
     connectors(j).connectorSignals.enable := decoder(j)
   }
 
-  // Select which SSPMConnector has access to the memory
   mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
