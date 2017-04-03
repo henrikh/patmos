@@ -67,10 +67,14 @@ class SSPMTop(val nConnectors: Int) extends Module {
   // Connect the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
     connectors(j).ocp <> io.ocp(j)
+    connectors(j).connectorSignals.S.Data := mem.io.S.Data
   }
 
-  // Select which SSPMConnector has access to the SPM
+  // Select which SSPMConnector has access to the memory
   mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
+  mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
+  mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
+  connectors(scheduler.io.out).connectorSignals.S.Data := mem.io.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
