@@ -56,23 +56,21 @@ class SPMemory extends Module() {
  */
 class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
-    val in = Vec.fill(nConnectors) {UInt(INPUT, DATA_WIDTH)}
     val ocp = Vec.fill(nConnectors) { new IODeviceIO().ocp }
-    val out = UInt(OUTPUT, DATA_WIDTH)
-    val select = UInt(INPUT, log2Up(nConnectors))
   }
+  val scheduler = Module(new Scheduler(nConnectors))
+  val mem = Module(new memSPM(64))
 
   // Vector for each connector
-  val sspms = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
+  val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
 
   // Connect the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
-    sspms(j).ocp.M.Data := io.in(j)
-    sspms(j).connectorSignals.S.Data := sspms(j).connectorSignals.M.Data
+    connectors(j).ocp <> io.ocp(j)
   }
 
   // Select which SSPMConnector has access to the SPM
-  io.out := sspms(io.select).ocp.S.Data
+  mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -89,16 +87,6 @@ object SSPMMain {
  */
 class SSPMTester(dut: SSPMTop) extends Tester(dut) {
 
-  for (j <- 0 until 3) {
-    poke(dut.io.in(j), j)
-  }
-  step(1)
-
-  for (j <- 0 until 3) {
-    poke(dut.io.select, j)
-    step(1)
-    expect(dut.io.out, j)
-  }
 }
 
 object SSPMTester {
