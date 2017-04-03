@@ -199,3 +199,15 @@ SSPM-connector-test:
 
 SSPM-connector-view:
 	gtkwave generated/SSPMConnector.vcd --save=SSPMConnector.gtkw
+
+SSPM-memmodule:
+	$(SBT) "run-main sspm.memModuleMain"
+
+SSPM-memmodule-test:
+	$(SBT) "run-main sspm.memModuleTester"	
+
+SSPM-memspm:
+	$(SBT) "run-main sspm.memSPMMain"		
+
+SSPM-memspm-test:
+	$(SBT) "run-main sspm.memSPMTester"
