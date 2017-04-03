@@ -32,7 +32,7 @@ class Scheduler(size: Int) extends Module {
   when (io.done) {
  	r1 := r1 + UInt(1)
 	// Does not really make sence, since we want our case to be 3 CPU's. Hence why would we break it at >= 2? might be because it is updating on next rising edge. <- it is! 
-        when ( r1 >= UInt(2) ) {
+        when ( r1 >= UInt(size) ) {
 		r1 := UInt(0)	
 	}
   	io.out := r1
@@ -46,58 +46,57 @@ object SchedulerMain {
   def main(args: Array[String]): Unit = {
     println("Generating the Scheduler hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new Scheduler(2)))
+      () => Module(new Scheduler(20)))
   }
 }
-
 
 
 /**
  * Test the Scheduler by printing out the value at each clock cycle.
  */
 class SchedulerTester(dut: Scheduler) extends Tester(dut) {
-/*
-  for (i <- 0 until 5) {
-    poke(dut.io.done, true)
-    println(i)
-    println(peek(dut.io.out))
+// Testing that it counts to the size.
+  poke(dut.io.done, true)
+  for (i <- 0 until 20) {
+    expect(dut.io.out, i)
     step(1)
   }
- */
+// Simple test case for the done flag.
+ /*
   poke(dut.io.done, false)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 0)
   step(1)
 
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 0)
   step(1)
   
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 1)
   step(1)
 
   poke(dut.io.done, false)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 2)
   step(1)
   
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 2)
   step(1)
   
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 3)
   step(1)
  
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 4)
   step(1)
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 5)
   step(1)
   poke(dut.io.done, true)
-  println(peek(dut.io.out))
+  expect(dut.io.out, 0)
   step(1)
-
+*/
 }
 
 /**
@@ -107,7 +106,7 @@ object SchedulerTester {
   def main(args: Array[String]): Unit = {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new Scheduler(2))) {
+      () => Module(new Scheduler(20))) {
         dut => new SchedulerTester(dut)
       }
   }
