@@ -57,6 +57,7 @@ class SPMemory extends Module() {
 class SSPMTop(val nConnectors: Int) extends Module {
   val io = new Bundle {
     val in = Vec.fill(nConnectors) {UInt(INPUT, DATA_WIDTH)}
+    val ocp = Vec.fill(nConnectors) { new IODeviceIO().ocp }
     val out = UInt(OUTPUT, DATA_WIDTH)
     val select = UInt(INPUT, log2Up(nConnectors))
   }
