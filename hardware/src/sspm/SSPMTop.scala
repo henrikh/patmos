@@ -30,6 +30,7 @@ trait SSPMConnectorSignals {
        val Data = Bits(OUTPUT, DATA_WIDTH)
        val Addr = Bits(OUTPUT, ADDR_WIDTH)
        val ByteEn = Bits(OUTPUT, 4)
+       val WE = Bits(OUTPUT, 1)
     }
 
     val S = new Bundle() {
@@ -76,6 +77,7 @@ class SSPMTop(val nConnectors: Int) extends Module {
   mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
+  mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.WE
   connectors(scheduler.io.out).connectorSignals.S.Data := mem.io.S.Data
 }
 

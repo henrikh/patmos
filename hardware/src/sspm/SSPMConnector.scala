@@ -29,6 +29,7 @@ class SSPMConnector extends IODevice() {
 
   val respReg = Reg(init = OcpResp.NULL)
   val cmdAcceptReg = Reg(init = Bits(width = 1))
+  val writeEnableReg = Reg(init = Bits(0, width = 1))
 
   respReg := OcpResp.NULL
   cmdAcceptReg := Bits(0)
@@ -38,6 +39,10 @@ class SSPMConnector extends IODevice() {
       respReg := OcpResp.DVA
       cmdAcceptReg := Bits(1)
     }
+
+    when(io.ocp.M.Cmd === OcpCmd.WR) {
+      writeEnableReg := Bits(1)
+    }
   }
 
   io.ocp.S.Resp := respReg
@@ -46,6 +51,7 @@ class SSPMConnector extends IODevice() {
   io.connectorSignals.M.Data := io.ocp.M.Data
   io.connectorSignals.M.Addr := io.ocp.M.Addr
   io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
+  io.connectorSignals.M.WE := writeEnableReg
   io.ocp.S.Data := io.connectorSignals.S.Data
 }
 
