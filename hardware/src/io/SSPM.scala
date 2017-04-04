@@ -92,7 +92,6 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
   mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.WE
-  connectors(scheduler.io.out).connectorSignals.S.Data := mem.io.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
