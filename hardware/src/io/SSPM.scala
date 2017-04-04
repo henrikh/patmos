@@ -9,17 +9,19 @@
  *
  */
 
-package sspm
+package io
 
 import Chisel._
+import Node._
 
 import patmos.Constants._
 
 import ocp._
 
-import io._
+import sspm._
 
 object SSPM extends DeviceObject {
+  var nConnectors = 1
 
   def init(params: Map[String, String]) = {
     nConnectors = getPosIntParam(params, "nConnectors")
