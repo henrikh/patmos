@@ -22,22 +22,19 @@ import io._
 /**
  * The connector for each OCP bus
  */
-class SSPMConnector extends IODevice() {
+class SSPMConnector extends CoreDevice() {
 
   // OCP pins and SSPMBackbone pins
-  override val io = new IODeviceIO() with SSPMConnectorSignals
+  override val io = new CoreDeviceIO() with SSPMConnectorSignals
 
   val respReg = Reg(init = OcpResp.NULL)
-  val cmdAcceptReg = Reg(init = Bits(width = 1))
   val writeEnableReg = Reg(init = Bits(0, width = 1))
 
   respReg := OcpResp.NULL
-  cmdAcceptReg := Bits(0)
 
   when(io.connectorSignals.enable === Bits(1)) {
     when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
       respReg := OcpResp.DVA
-      cmdAcceptReg := Bits(1)
     }
 
     when(io.ocp.M.Cmd === OcpCmd.WR) {
@@ -46,7 +43,6 @@ class SSPMConnector extends IODevice() {
   }
 
   io.ocp.S.Resp := respReg
-  io.ocp.S.CmdAccept := cmdAcceptReg
 
   io.connectorSignals.M.Data := io.ocp.M.Data
   io.connectorSignals.M.Addr := io.ocp.M.Addr
@@ -87,7 +83,6 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   expect(dut.io.connectorSignals.M.Data, 42)
 
   expect(dut.io.ocp.S.Resp, 1)
-  expect(dut.io.ocp.S.CmdAccept, 1)
 
   // Read test
 
@@ -105,7 +100,6 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.S.Data, 42)
 
   expect(dut.io.ocp.S.Resp, 1)
-  expect(dut.io.ocp.S.CmdAccept, 1)
   expect(dut.io.ocp.S.Data, 42)
 
   // Idle test
@@ -120,7 +114,6 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   step(1)
 
   expect(dut.io.ocp.S.Resp, 0)
-  expect(dut.io.ocp.S.CmdAccept, 0)
 }
 
 object SSPMConnectorTester {

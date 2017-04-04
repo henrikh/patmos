@@ -55,10 +55,9 @@ class SPMemory extends Module() {
 /**
  * A top level of SSPM
  */
-class SSPMTop(val nConnectors: Int) extends Module {
-  val io = new Bundle {
-    val ocp = Vec.fill(nConnectors) { new IODeviceIO().ocp }
-  }
+class SSPM(val nConnectors: Int) extends CoreDevice {
+
+  override val io = new CoreDeviceIO()
 
   // Generate modules
   val mem = Module(new memSPM(64))
@@ -68,7 +67,9 @@ class SSPMTop(val nConnectors: Int) extends Module {
 
   // Connect the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
-    connectors(j).ocp <> io.ocp(j)
+    if(j == 0) {
+      connectors(j).ocp <> io.ocp
+    }
     connectors(j).connectorSignals.S.Data := mem.io.S.Data
 
     connectors(j).connectorSignals.enable := decoder(j)
@@ -86,14 +87,14 @@ object SSPMMain {
   def main(args: Array[String]): Unit = {
     println("Generating the SSPM hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new SSPMTop(3)))
+      () => Module(new SSPM(3)))
   }
 }
 
 /**
  * Test the SSPM design
  */
-class SSPMTester(dut: SSPMTop) extends Tester(dut) {
+class SSPMTester(dut: SSPM) extends Tester(dut) {
 
 }
 
@@ -102,7 +103,7 @@ object SSPMTester {
     println("Testing the SSPM")
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new SSPMTop(3))) {
+      () => Module(new SSPM(3))) {
         f => new SSPMTester(f)
       }
   }
