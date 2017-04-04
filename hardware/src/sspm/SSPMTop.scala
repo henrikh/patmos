@@ -19,6 +19,17 @@ import ocp._
 
 import io._
 
+object SSPM extends DeviceObject {
+
+  def init(params: Map[String, String]) = {
+    nConnectors = getPosIntParam(params, "nConnectors")
+  }
+
+  def create(params: Map[String, String]): SSPM = Module(new SSPM(nConnectors))
+
+  trait Pins {}
+}
+
 /**
  * Connection between SSPMConnector and the SSPM
  */
