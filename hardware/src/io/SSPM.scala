@@ -78,6 +78,8 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
   val scheduler = Module(new Scheduler(nConnectors))
   val decoder = UIntToOH(scheduler.io.out, nConnectors)
 
+  scheduler.io.done := Bool(true)
+
   // Connect the SSPMConnector with the SSPM
   for (j <- 0 until nConnectors) {
     if(j == 0) {
