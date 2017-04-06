@@ -32,7 +32,7 @@ class Scheduler(size: Int) extends Module {
   when (io.done) {
     r1 := r1 + UInt(1)
     // Does not really make sence, since we want our case to be 3 CPU's. Hence why would we break it at >= 2? might be because it is updating on next rising edge. <- it is!
-    when ( r1 >= UInt(size) ) {
+    when ( r1 >= UInt(size - 1) ) {
       r1 := UInt(0)
     }
     io.out := r1
