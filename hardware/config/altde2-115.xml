@@ -9,7 +9,6 @@
 	<IO DevTypeRef="Uart" offset="8"/>
 	<IO DevTypeRef="Leds" offset="9"/>
 	<IO DevTypeRef="Keys" offset="10" intrs="2,3,4,5"/>
-	<IO DevTypeRef="SSPM" offset="7"/>
   </IOs>
 
   <Devs>
@@ -27,11 +26,6 @@
   	<Dev DevType="Keys" entity="Keys" iface="OcpCore">
   	  <params>
   		<param name="keyCount" value="4"/>
-  	  </params>
-  	</Dev>
-  	<Dev DevType="SSPM" entity="SSPM" iface="OcpCore">
-  	  <params>
-  		<param name="nConnectors" value="1"/>
   	  </params>
   	</Dev>
 	<Dev DevType="Sram16" entity="SRamCtrl" iface="OcpBurst">
