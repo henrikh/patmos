@@ -145,8 +145,8 @@ class InOut() extends Module {
       validDevices(devConf.offset) = true;
     } else {
       ChiselError.error("Can't assign multiple devices to the same offset. " +
-                        "Device " + devConf.name + " conflicting on pin " +
-                        devConf.offset.toString)
+                        "Device " + devConf.name + " conflicting on offset " +
+                        devConf.offset.toString + ". ")
     }
     // connect ports
     dev.io.ocp.M := io.memInOut.M
@@ -165,7 +165,7 @@ class InOut() extends Module {
 
   // Hard-wire the sideband flags from the NI to interrupt pins
   io.intrs(NI_MSG_INTR) := io.comConf.S.Flag(0)
-  io.intrs(NI_EXT_INTR) := io.comConf.S.Flag(1)  
+  io.intrs(NI_EXT_INTR) := io.comConf.S.Flag(1)
 
   if (HAS_MMU) {
     io.mmuInOut.M := io.memInOut.M
