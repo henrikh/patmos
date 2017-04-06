@@ -29,23 +29,31 @@ class SSPMConnector extends CoreDevice() {
 
   val respReg = Reg(init = OcpResp.NULL)
   val writeEnableReg = Reg(init = Bits(0, width = 1))
+  val MAddrReg = Reg(init = Bits(width = ADDR_WIDTH))
+  val MDataReg = Reg(init = Bits(width = DATA_WIDTH))
 
   respReg := OcpResp.NULL
+  writeEnableReg := Bits(0)
+  MAddrReg := Bits(0)
+  MDataReg := Bits(0)
 
   when(io.connectorSignals.enable === Bits(1)) {
+
     when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
       respReg := OcpResp.DVA
+      MAddrReg := io.ocp.M.Addr
     }
 
     when(io.ocp.M.Cmd === OcpCmd.WR) {
       writeEnableReg := Bits(1)
+      MDataReg := io.ocp.M.Data
     }
   }
 
   io.ocp.S.Resp := respReg
 
-  io.connectorSignals.M.Data := io.ocp.M.Data
-  io.connectorSignals.M.Addr := io.ocp.M.Addr
+  io.connectorSignals.M.Addr := MAddrReg
+  io.connectorSignals.M.Data := MDataReg
   io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
   io.connectorSignals.M.WE := writeEnableReg
   io.ocp.S.Data := io.connectorSignals.S.Data
