@@ -60,6 +60,12 @@ class SchedulerTester(dut: Scheduler) extends Tester(dut) {
   }
 
   expect(dut.io.out, 0)
+
+  // Disable progress
+  poke(dut.io.done, false)
+
+  step(1)
+  expect(dut.io.out, 0)
 }
 
 /**
