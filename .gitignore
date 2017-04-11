@@ -1,6 +1,7 @@
 config.mk*
 *~
 hardware/project
+hardware/generated
 hardware/target
 hardware/build
 tools/c/build
