@@ -51,10 +51,10 @@ object SchedulerMain {
 /**
  * Test the Scheduler by printing out the value at each clock cycle.
  */
-class SchedulerTester(dut: Scheduler) extends Tester(dut) {
+class SchedulerTester(dut: Scheduler, size: Int) extends Tester(dut) {
   // Testing that it counts to the size.
   poke(dut.io.done, true)
-  for (i <- 0 until 32) {
+  for (i <- 0 until size) {
     expect(dut.io.out, i)
     step(1)
   }
@@ -76,7 +76,7 @@ object SchedulerTester {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
       () => Module(new Scheduler(32))) {
-        dut => new SchedulerTester(dut)
+        dut => new SchedulerTester(dut, 32)
       }
   }
 }
