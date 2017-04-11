@@ -16,7 +16,6 @@ import Node._
 
 import patmos.Constants._
 
-
 /*
  * A memory module
 */
@@ -64,48 +63,38 @@ object memModuleMain {
 // Testing
 
 class memModuleTester(dut: memModule) extends Tester(dut) {
+  def wr(addr: BigInt, data: BigInt, blockEnable: BigInt) = {
+    poke(dut.io.M.Data, data)
+    poke(dut.io.M.Addr, addr)  
+    poke(dut.io.M.blockEnable,  blockEnable)
+    poke(dut.io.M.We, 1)      
+
+    step(1)
+  }
+
+  def wr_test(data: BigInt) = {
+    expect(dut.io.S.Data, data)
+  }    
 
   // Write test
-  poke(dut.io.M.Data, 42)
-  poke(dut.io.M.Addr, 1)  
-  poke(dut.io.M.blockEnable, 1)
-  poke(dut.io.M.We, 1)  
+  wr(1, 42, 1)
+  wr_test(42)
 
-  step(1)
-
-  //Read test
-
+  // Write test where we chech that We does not affect read
+  wr(1, 43, 1)
+  // We take a step, and then We = 0
   poke(dut.io.M.We, 0)
-  expect(dut.io.S.Data, 42)
+  wr_test(43)  
 
   step(1)
 
   // Write test with block enable off
-  poke(dut.io.M.blockEnable, 0)
-  poke(dut.io.M.We, 1)    
-  poke(dut.io.M.Data, 13)  
+  wr(1, 13, 0)
+  wr_test(43)
 
-  step(1)
-
-  //Read, expect no change
-
-  poke(dut.io.M.We, 0)
-  expect(dut.io.S.Data, 42)  
-
-  step(1)
-
-  // Write new value
-  poke(dut.io.M.Data, 66)
-  poke(dut.io.M.blockEnable, 1)
-  poke(dut.io.M.We, 1)    
-
-  step(1)
-
-  // Expect 66  
-
-  poke(dut.io.M.We, 0)
-  expect(dut.io.S.Data, 66)   
-
+  // Write new value again
+  wr(1, 66, 1)
+  wr_test(66)
 }
 
 object memModuleTester {
@@ -154,8 +143,6 @@ class  memSPM(size: Int) extends Module {
     memories(j).M.Addr := io.M.Addr(addrBits - 1, 2)
     memories(j).M.blockEnable := io.M.ByteEn(j)
     memories(j).M.We := io.M.We
-    //This would be the preffered way, but Chisel3 does not support subword assignment for outputs?
-    //io.S.Data((j+1)*8-1, j*8) := memories(j).S.Data // Replace 8 with BYTE_WIDTH?
   }  
   io.S.Data := Cat(memories(3).S.Data, memories(2).S.Data, memories(1).S.Data, memories(0).S.Data)
 }
@@ -169,86 +156,59 @@ object memSPMMain {
   }
 }
 
-
 // Testing 
-
 
 class memSPMTester(dut: memSPM) extends Tester(dut) {
 
+  def wr(addr: BigInt, data: BigInt, byteEn: BigInt) = {
+    poke(dut.io.M.Data, data)
+    poke(dut.io.M.Addr, addr)  
+    poke(dut.io.M.ByteEn,  byteEn)
+    poke(dut.io.M.We, 1)      
+
+    step(1)
+  }
+
+  def wr_test(data: BigInt) = {
+    expect(dut.io.S.Data, data)
+  }  
+
   // Write test
-  poke(dut.io.M.Data, 42)
-  poke(dut.io.M.Addr, 1)  
-  poke(dut.io.M.ByteEn,  Bits("b1111").litValue())
-  poke(dut.io.M.We, 1)  
+  wr(1, 42, Bits("b1111").litValue())
+  wr_test(42)
 
-  step(1)
-
-  //Read test
-
-  poke(dut.io.M.We, 0)
-  expect(dut.io.S.Data, 42)
-
-  step(1)
+  //step(1) We do not need these in between
 
   // Write test with block enable off
-  poke(dut.io.M.ByteEn, 0)  
-  poke(dut.io.M.We, 1)    
-  poke(dut.io.M.Data, 13)  
-
-  step(1)
-
-  //Read, expect no change
-
-  poke(dut.io.M.We, 0)
-  expect(dut.io.S.Data, 42)  
-
-  step(1)
+  wr(1, 13, 0)
+  wr_test(42) // We expect the same data still
 
   // Write new value
-  poke(dut.io.M.Data, 66)
-  poke(dut.io.M.ByteEn,  Bits("b1111").litValue())
-  poke(dut.io.M.We, 1)    
+  wr(1, 66, Bits("b1111").litValue())
+  wr_test(66) 
 
-  step(1)
-
-  // Expect 66  
-
-  poke(dut.io.M.We, 0)
-  expect(dut.io.S.Data, 66)   
-
-  step(1)
+  val g = peek(dut.io.S.Data)
 
   // Test byte writing 
   // First write all 1s to array, and selectively set these to 0 later on
-  poke(dut.io.M.Addr, 0)  
-  poke(dut.io.M.Data, Bits("hffffffff").litValue())
-  poke(dut.io.M.ByteEn,  Bits("b1111").litValue())
-  poke(dut.io.M.We, 1)    
+  wr(0, Bits("hffffffff").litValue(), Bits("b1111").litValue())
+  wr_test(Bits("hffffffff").litValue()) 
 
-  step(1)  
+  wr(0, 0, Bits("b1000").litValue())
+  wr_test(Bits("h00ffffff").litValue())
 
-  expect(dut.io.S.Data, Bits("hffffffff").litValue())    
-  poke(dut.io.M.Data, 0)
-  poke(dut.io.M.ByteEn,  Bits("b1000").litValue())
+  wr(0, 0, Bits("b0100").litValue())
+  wr_test(Bits("h0000ffff").litValue())
 
-  step(1)
+  wr(0, 0, Bits("b0010").litValue())
+  wr_test(Bits("h000000ff").litValue())
 
-  expect(dut.io.S.Data, Bits("h00ffffff").litValue())  
-  poke(dut.io.M.ByteEn,  Bits("b0100").litValue())
+  wr(0, 0, Bits("b0001").litValue())
+  wr_test(Bits("h00000000").litValue())  
 
-  step(1)
-
-  expect(dut.io.S.Data, Bits("h0000ffff").litValue())  
-  poke(dut.io.M.ByteEn,  Bits("b0010").litValue())
-
-  step(1)
-
-  expect(dut.io.S.Data, Bits("h000000ff").litValue())  
-  poke(dut.io.M.ByteEn,  Bits("b001").litValue())
-
-  step(1)
-
-  expect(dut.io.S.Data, Bits("h00000000").litValue())  
+  // Test writing 2 bytes at the same time
+  wr(0, Bits("hffffffff").litValue(), Bits("b1001").litValue())
+  wr_test(Bits("hff0000ff").litValue())  
 }
 
 

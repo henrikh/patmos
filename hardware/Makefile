@@ -180,10 +180,10 @@ modcomp:
 # SSPM make targets
 
 SSPM:
-	$(SBT) "run-main sspm.SSPMMain"
+	$(SBT) "run-main io.SSPMMain"
 
 SSPM-test:
-	$(SBT) "run-main sspm.SSPMTester"
+	$(SBT) "run-main io.SSPMTester"
 
 SSPM-scheduler:
 	$(SBT) "run-main sspm.SchedulerMain"
