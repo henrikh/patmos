@@ -151,6 +151,8 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   rd(1, Bits("b1111").litValue())
 
   step(1)
+  idle()
+
   expect(dut.io.ocp.S.Resp, 0)
   expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
   expect(dut.io.connectorSignals.M.Addr, 1)
@@ -168,6 +170,86 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   expect(dut.io.ocp.S.Data, 42)
 
   poke(dut.io.connectorSignals.enable, 0)
+  poke(dut.io.connectorSignals.S.Data, 0)
+
+  // Write test with synchronous enable
+
+  step(1)
+
+  wr(1, 42, Bits("b1111").litValue())
+  poke(dut.io.connectorSignals.enable, 1)
+
+  expect(dut.io.connectorSignals.M.Addr, 0)
+  expect(dut.io.connectorSignals.M.Data, 0)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b0000").litValue())
+
+  peek(dut.io.ocp.S.Resp)
+
+  step(1)
+  idle()
+
+  poke(dut.io.connectorSignals.enable, 0)
+
+  expect(dut.io.connectorSignals.M.Addr, 1)
+  expect(dut.io.connectorSignals.M.Data, 42)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  expect(dut.io.connectorSignals.M.Addr, 1)
+  expect(dut.io.connectorSignals.M.Data, 42)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+
+  step(1)
+  poke(dut.io.connectorSignals.enable, 0)
+
+  expect(dut.io.ocp.S.Resp, 1)
+
+  step(1)
+
+  idle()
+
+  // Write test with synchronous enable
+
+  step(1)
+
+  rd(1, Bits("b1111").litValue())
+  poke(dut.io.connectorSignals.enable, 1)
+
+  expect(dut.io.connectorSignals.M.Addr, 0)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b0000").litValue())
+
+  peek(dut.io.ocp.S.Resp)
+
+  step(1)
+  idle()
+
+  poke(dut.io.connectorSignals.enable, 0)
+
+  expect(dut.io.connectorSignals.M.Addr, 1)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  expect(dut.io.connectorSignals.M.Addr, 1)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+
+  poke(dut.io.connectorSignals.S.Data, 42)
+
+  step(1)
+  poke(dut.io.connectorSignals.enable, 0)
+
+  expect(dut.io.ocp.S.Resp, 1)
+  expect(dut.io.ocp.S.Data, 42)
+
+  step(1)
+
+  idle()
+
 }
 
 object SSPMConnectorTester {
