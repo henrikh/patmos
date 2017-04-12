@@ -1,6 +1,9 @@
 # Get the hardware build dir from the parent make
 HWBUILDDIR?=$(CURDIR)/build
 
+# Get the hardware generated dir from the parent make
+HWGENDIR?=$(CURDIR)/generated
+
 BOOTAPP?=bootable-bootloader
 
 BOOTBUILDROOT?=$(CURDIR)/..
@@ -41,12 +44,14 @@ SRC=$(shell find src -name '*.scala')
 MAIN=patmos.PatmosMain
 
 # main classes for core, memory controller and arbiter
+# here we add for our sspm
 COREMAIN=patmos.PatmosCoreMain
 MEMCTRLMAIN32=io.SSRam32Main
 MEMCTRLMAIN16=io.SRamMain
 MEMCTRLMAINOC=io.OCRamMain
 ARBITERMAIN=ocp.ArbiterMain
 TDMARBITERMAIN=ocp.TdmArbiterWrapperMain
+MEMSSPM=io.SSPMMain
 
 # config file for Patmos -- now just frequency
 #CONFIG=default
@@ -131,6 +136,9 @@ $(HWBUILDDIR)/Arbiter.v: $(SRC)
 $(HWBUILDDIR)/TdmArbiterWrapper.v: $(SRC)
 	$(SBT) "run-main $(TDMARBITERMAIN) $(ARBITER_CNT) $(ARBITER_ADDR_WIDTH) $(ARBITER_DATA_WIDTH) $(ARBITER_BURST_LENGTH) --targetDir $(HWBUILDDIR) --cse --backend v"
 
+$(HWBUILDDIR)/SSPM.v: $(SRC)
+	$(SBT) "run-main $(MEMSSPM) --targetDir $(HWBUILDDIR) --cse --backend v"	
+
 # run Verilog simulation
 vsim: verilog
 	echo '`timescale 1 ns / 100 ps' > $(HWBUILDDIR)/Patmos.v.tmp
@@ -180,7 +188,7 @@ modcomp:
 # SSPM make targets
 
 SSPM:
-	$(SBT) "run-main io.SSPMMain"
+	$(SBT) "run-main io.SSPMMain --targetDir $(HWGENDIR) --cse --backend v"
 
 SSPM-test:
 	$(SBT) "run-main io.SSPMTester"

@@ -89,7 +89,7 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
 
     // Enable connectors based upon one-hot coding of scheduler
     connectors(j).connectorSignals.enable := decoder(j)
-  }
+  } 
 
   mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
@@ -101,10 +101,12 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
 object SSPMMain {
   def main(args: Array[String]): Unit = {
     println("Generating the SSPM hardware")
-    chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new SSPM(3)))
+    val chiselArgs = args.slice(0,args.length) // If we later add for number of connectors,
+                                               // we shoud index in another fashion, see SRamCtrl
+    chiselMain(chiselArgs, () => Module(new SSPM(3)))
   }
 }
+
 
 /**
  * Test the SSPM design
@@ -190,3 +192,5 @@ object SSPMTester {
       }
   }
 }
+
+
