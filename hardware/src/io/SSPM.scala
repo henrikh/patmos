@@ -110,6 +110,52 @@ object SSPMMain {
  * Test the SSPM design
  */
 class SSPMTester(dut: SSPM) extends Tester(dut) {
+  def idleCmd() = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
+    poke(dut.io.ocp.M.Addr, 0)
+    poke(dut.io.ocp.M.Data, 0)
+    poke(dut.io.ocp.M.ByteEn, Bits("b0000").litValue())
+  }
+
+  // Initial setup
+  idleCmd()
+
+  expect(dut.io.ocp.S.Resp, 0)
+
+  // Write test
+  step(1)
+
+  poke(dut.io.ocp.M.Cmd, OcpCmd.WR.litValue())
+  poke(dut.io.ocp.M.Addr, 1)
+  poke(dut.io.ocp.M.Data, 42)
+  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
+
+  step(1)
+
+  idleCmd()
+
+  // Keep command set until accepted
+  while(peek(dut.io.ocp.S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
+  // Read  test
+  step(1)
+
+  poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
+  poke(dut.io.ocp.M.Addr, 1)
+  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
+
+  step(1)
+
+  idleCmd()
+
+  // Keep command set until accepted
+  while(peek(dut.io.ocp.S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
+  expect(dut.io.ocp.S.Data, 42)
 
 }
 
