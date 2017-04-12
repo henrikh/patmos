@@ -87,8 +87,9 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
     }
     connectors(j).connectorSignals.S.Data := mem.io.S.Data
 
+    // Enable connectors based upon one-hot coding of scheduler
     connectors(j).connectorSignals.enable := decoder(j)
-  }
+  } 
 
   mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
@@ -100,15 +101,84 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
 object SSPMMain {
   def main(args: Array[String]): Unit = {
     println("Generating the SSPM hardware")
-    chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new SSPM(3)))
+    val chiselArgs = args.slice(0,args.length) // If we later add for number of connectors,
+                                               // we shoud index in another fashion, see SRamCtrl
+    chiselMain(chiselArgs, () => Module(new SSPM(3)))
   }
 }
+
 
 /**
  * Test the SSPM design
  */
 class SSPMTester(dut: SSPM) extends Tester(dut) {
+  def idle() = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
+    poke(dut.io.ocp.M.Addr, 0)
+    poke(dut.io.ocp.M.Data, 0)
+    poke(dut.io.ocp.M.ByteEn, Bits("b0000").litValue())
+  }
+
+  def wr(addr: BigInt, data: BigInt, byteEn: BigInt) = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.WR.litValue())
+    poke(dut.io.ocp.M.Addr, addr)
+    poke(dut.io.ocp.M.Data, data)
+    poke(dut.io.ocp.M.ByteEn, byteEn)
+  }
+
+  def rd(addr: BigInt, byteEn: BigInt) = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
+    poke(dut.io.ocp.M.Addr, addr)
+    poke(dut.io.ocp.M.Data, 0)
+    poke(dut.io.ocp.M.ByteEn, byteEn)
+  }
+
+  // Initial setup
+  println("\nSetup initial state\n")
+
+  idle()
+
+  expect(dut.io.ocp.S.Resp, 0)
+
+  // Write test
+  println("\nTest write\n")
+  step(1)
+
+  wr(1, 42, Bits("b1111").litValue())
+
+  step(1)
+
+  idle()
+
+  println("\nStall until data valid\n")
+  // Stall until data valid
+  while(peek(dut.io.ocp.S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
+  step(1)
+  expect(dut.io.ocp.S.Resp, 0)
+
+  // Read  test
+  println("\nRead test\n")
+  step(1)
+
+  rd(1, Bits("b1111").litValue())
+
+  step(1)
+
+  idle()
+
+  println("\nStall until data valid\n")
+  // Stall until data valid
+  while(peek(dut.io.ocp.S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
+  expect(dut.io.ocp.S.Data, 42)
+
+  step(1)
+  expect(dut.io.ocp.S.Resp, 0)
 
 }
 
@@ -122,3 +192,5 @@ object SSPMTester {
       }
   }
 }
+
+

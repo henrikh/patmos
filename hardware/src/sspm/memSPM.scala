@@ -187,8 +187,6 @@ class memSPMTester(dut: memSPM) extends Tester(dut) {
   wr(1, 66, Bits("b1111").litValue())
   wr_test(66) 
 
-  val g = peek(dut.io.S.Data)
-
   // Test byte writing 
   // First write all 1s to array, and selectively set these to 0 later on
   wr(0, Bits("hffffffff").litValue(), Bits("b1111").litValue())
