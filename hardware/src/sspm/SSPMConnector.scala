@@ -32,35 +32,32 @@ class SSPMConnector extends CoreDevice() {
   val MAddrReg = Reg(init = Bits(width = ADDR_WIDTH))
   val MDataReg = Reg(init = Bits(width = DATA_WIDTH))
   val MByteEnReg = Reg(init = Bits(width = 4))
-  val armedReg = Reg(init = Bool(false))
+  val armedReg = Reg(init = Bits(0, width = 1))
 
   respReg := OcpResp.NULL
-  writeEnableReg := Bits(0)
-  MAddrReg := Bits(0)
-  MDataReg := Bits(0)
 
   when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
     MAddrReg := io.ocp.M.Addr
     MByteEnReg := io.ocp.M.ByteEn
-    armedReg := Bool(true)
+    armedReg := Bits(1)
   }
 
   when(io.ocp.M.Cmd === OcpCmd.WR) {
     MDataReg := io.ocp.M.Data
+    writeEnableReg := Bits(1)
   }
 
   when(io.connectorSignals.enable === Bits(1)) {
 
-    when(armedReg || io.ocp.M.Cmd === OcpCmd.RD) {
+    when(armedReg === Bits(1)) {
       respReg := OcpResp.DVA
-      armedReg := Bool(false)
+      armedReg := Bits(0)
+      writeEnableReg := Bits(0)
+      MAddrReg := Bits(0)
+      MDataReg := Bits(0)
+      MByteEnReg := Bits(0)
     }
 
-    when(armedReg || io.ocp.M.Cmd === OcpCmd.WR) {
-      respReg := OcpResp.DVA
-      writeEnableReg := Bits(1)
-      armedReg := Bool(false)
-    }
   }
 
   io.ocp.S.Resp := respReg
