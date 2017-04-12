@@ -31,6 +31,7 @@ class SSPMConnector extends CoreDevice() {
   val writeEnableReg = Reg(init = Bits(0, width = 1))
   val MAddrReg = Reg(init = Bits(width = ADDR_WIDTH))
   val MDataReg = Reg(init = Bits(width = DATA_WIDTH))
+  val SDataReg = Reg(init = Bits(width = DATA_WIDTH))
   val MByteEnReg = Reg(init = Bits(width = 4))
   val armedReg = Reg(init = Bits(0, width = 1))
 
@@ -48,6 +49,7 @@ class SSPMConnector extends CoreDevice() {
   }
 
   when(io.connectorSignals.enable === Bits(1)) {
+    SDataReg := io.connectorSignals.S.Data
 
     when(armedReg === Bits(1)) {
       respReg := OcpResp.DVA
@@ -66,7 +68,7 @@ class SSPMConnector extends CoreDevice() {
   io.connectorSignals.M.Data := MDataReg
   io.connectorSignals.M.ByteEn := MByteEnReg
   io.connectorSignals.M.WE := writeEnableReg
-  io.ocp.S.Data := io.connectorSignals.S.Data
+  io.ocp.S.Data := SDataReg
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -163,11 +165,11 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.S.Data, 42)
 
   step(1)
-  expect(dut.io.ocp.S.Resp, 1)
-  expect(dut.io.ocp.S.Data, 42)
-
   poke(dut.io.connectorSignals.enable, 0)
   poke(dut.io.connectorSignals.S.Data, 0)
+
+  expect(dut.io.ocp.S.Resp, 1)
+  expect(dut.io.ocp.S.Data, 42)
 
   // Write test with synchronous enable
 
@@ -239,6 +241,7 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
   step(1)
   poke(dut.io.connectorSignals.enable, 0)
+  poke(dut.io.connectorSignals.S.Data, 0)
 
   expect(dut.io.ocp.S.Resp, 1)
   expect(dut.io.ocp.S.Data, 42)
