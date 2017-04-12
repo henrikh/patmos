@@ -85,71 +85,96 @@ object SSPMConnectorMain {
  * Test the SSPM design
  */
 class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
+  def idle() = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
+    poke(dut.io.ocp.M.Addr, 0)
+    poke(dut.io.ocp.M.Data, 0)
+    poke(dut.io.ocp.M.ByteEn, Bits("b0000").litValue())
+  }
 
-  // Write test
+  def wr(addr: BigInt, data: BigInt, byteEn: BigInt) = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.WR.litValue())
+    poke(dut.io.ocp.M.Addr, addr)
+    poke(dut.io.ocp.M.Data, data)
+    poke(dut.io.ocp.M.ByteEn, byteEn)
+  }
+
+  def rd(addr: BigInt, byteEn: BigInt) = {
+    poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
+    poke(dut.io.ocp.M.Addr, addr)
+    poke(dut.io.ocp.M.Data, 0)
+    poke(dut.io.ocp.M.ByteEn, byteEn)
+  }
+
+  idle()
+  poke(dut.io.connectorSignals.enable, 0)
+
+  // Write test with delayed enable
+
   step(1)
 
-  poke(dut.io.ocp.M.Cmd, OcpCmd.WR.litValue())
-  poke(dut.io.ocp.M.Addr, 1)
-  poke(dut.io.ocp.M.Data, 42)
-  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
-
-  poke(dut.io.connectorSignals.enable, 1)
+  wr(1, 42, Bits("b1111").litValue())
 
   step(1)
 
-  poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
-  poke(dut.io.ocp.M.Addr, 0)
-  poke(dut.io.ocp.M.Data, 0)
-  poke(dut.io.ocp.M.ByteEn, Bits("b0000").litValue())
+  idle()
 
   expect(dut.io.connectorSignals.M.Addr, 1)
   expect(dut.io.connectorSignals.M.Data, 42)
   expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
-
-  expect(dut.io.ocp.S.Resp, 1)
+  expect(dut.io.ocp.S.Resp, 0)
 
   step(1)
 
-  peek(dut.io.ocp.S.Resp)
-
-  // Read test
-
-  poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
-  poke(dut.io.ocp.M.Addr, 1)
-  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
+  expect(dut.io.connectorSignals.M.Addr, 1)
+  expect(dut.io.connectorSignals.M.Data, 42)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+  expect(dut.io.ocp.S.Resp, 0)
 
   poke(dut.io.connectorSignals.enable, 1)
 
   step(1)
+  poke(dut.io.connectorSignals.enable, 0)
 
+  expect(dut.io.ocp.S.Resp, 1)
+
+  idle()
+
+  step(1)
+  expect(dut.io.ocp.S.Resp, 0)
+
+  step(1)
+
+  // Read test with delayed enable
+
+  poke(dut.io.connectorSignals.enable, 0)
+  rd(1, Bits("b1111").litValue())
+
+  step(1)
+  expect(dut.io.ocp.S.Resp, 0)
   expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
   expect(dut.io.connectorSignals.M.Addr, 1)
 
+  step(1)
+  expect(dut.io.ocp.S.Resp, 0)
+  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+  expect(dut.io.connectorSignals.M.Addr, 1)
+
+  poke(dut.io.connectorSignals.enable, 1)
   poke(dut.io.connectorSignals.S.Data, 42)
 
+  step(1)
   expect(dut.io.ocp.S.Resp, 1)
   expect(dut.io.ocp.S.Data, 42)
 
-  // Idle test
-  step(1)
-
-  poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
-  poke(dut.io.ocp.M.Addr, 1)
-  poke(dut.io.ocp.M.ByteEn, Bits("b1111").litValue())
-
-  poke(dut.io.connectorSignals.enable, 1)
-
-  step(1)
-
-  expect(dut.io.ocp.S.Resp, 0)
+  poke(dut.io.connectorSignals.enable, 0)
 }
 
 object SSPMConnectorTester {
   def main(args: Array[String]): Unit = {
     println("Testing the SSPM")
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
-      "--compile", "--targetDir", "generated"),
+      "--compile", "--targetDir", "generated", "--vcd"),
       () => Module(new SSPMConnector())) {
         f => new SSPMConnectorTester(f)
       }
