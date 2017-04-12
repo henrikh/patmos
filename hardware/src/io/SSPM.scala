@@ -87,6 +87,7 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
     }
     connectors(j).connectorSignals.S.Data := mem.io.S.Data
 
+    // Enable connectors based upon one-hot coding of scheduler
     connectors(j).connectorSignals.enable := decoder(j)
   }
 
