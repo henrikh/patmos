@@ -132,11 +132,14 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
   }
 
   // Initial setup
+  println("\nSetup initial state\n")
+
   idle()
 
   expect(dut.io.ocp.S.Resp, 0)
 
   // Write test
+  println("\nTest write\n")
   step(1)
 
   wr(1, 42, Bits("b1111").litValue())
@@ -145,7 +148,8 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
 
   idle()
 
-  // Wait until data valid
+  println("\nStall until data valid\n")
+  // Stall until data valid
   while(peek(dut.io.ocp.S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }
@@ -154,6 +158,7 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
   expect(dut.io.ocp.S.Resp, 0)
 
   // Read  test
+  println("\nRead test\n")
   step(1)
 
   rd(1, Bits("b1111").litValue())
@@ -162,7 +167,8 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
 
   idle()
 
-  // Wait until data valid
+  println("\nStall until data valid\n")
+  // Stall until data valid
   while(peek(dut.io.ocp.S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }
