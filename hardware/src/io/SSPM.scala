@@ -73,7 +73,7 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
   override val io = new CoreDeviceIO()
 
   // Generate modules
-  val mem = Module(new memSPM(64))
+  val mem = Module(new memSPM(1024))
   val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
   val scheduler = Module(new Scheduler(nConnectors))
   val decoder = UIntToOH(scheduler.io.out, nConnectors)

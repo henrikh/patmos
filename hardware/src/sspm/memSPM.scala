@@ -25,7 +25,7 @@ class memModule(size: Int) extends Module {
 
     val M = new Bundle() {
        val Data = UInt(INPUT, BYTE_WIDTH)
-       val Addr = UInt(INPUT, log2Up(size / BYTES_PER_WORD)-2)
+       val Addr = UInt(INPUT, log2Up(size / BYTES_PER_WORD))
        val blockEnable = UInt(INPUT, 1) // From byte enable
        val We = UInt(INPUT, 1)    
     }
@@ -36,9 +36,11 @@ class memModule(size: Int) extends Module {
   }
 
   // Second option is number of entries
+  // So e.g. for 128 entry memory of 32 bit Uint we write 128.
+  // here, we dot it in BYTE_WIDTH = 8.
   val syncMem = Mem(UInt(width=BYTE_WIDTH), size / BYTES_PER_WORD, seqRead=true)
 
-  io.S.Data := syncMem(io.M.Addr)
+  io.S.Data := Bits(0)
 
   // Please note: the manual states that single-ported SRAMS can be inferred
   // when the read and write conditons are mutually exclusie in the same when chain.
@@ -46,9 +48,11 @@ class memModule(size: Int) extends Module {
       syncMem(io.M.Addr) := io.M.Data
 
   }.otherwise{ 
-
     io.S.Data := syncMem(io.M.Addr) 
   }
+
+  //io.S.Data := syncMem(io.M.Addr)
+
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -70,6 +74,8 @@ class memModuleTester(dut: memModule) extends Tester(dut) {
     poke(dut.io.M.We, 1)      
 
     step(1)
+
+    poke(dut.io.M.We, 0)      
   }
 
   def wr_test(data: BigInt) = {
@@ -77,24 +83,30 @@ class memModuleTester(dut: memModule) extends Tester(dut) {
   }    
 
   // Write test
-  wr(1, 42, 1)
+  wr(0, 42, 1)
   wr_test(42)
 
-  // Write test where we chech that We does not affect read
-  wr(1, 43, 1)
-  // We take a step, and then We = 0
-  poke(dut.io.M.We, 0)
+  // Write test where we check that We does not affect read
+  wr(0, 43, 1)
   wr_test(43)  
 
   step(1)
 
   // Write test with block enable off
-  wr(1, 13, 0)
+  wr(0, 13, 0)
   wr_test(43)
 
   // Write new value again
   wr(1, 66, 1)
   wr_test(66)
+
+  //Check that old value still exists
+  poke(dut.io.M.Addr, 0)
+  step(1)
+  wr_test(43)  
+
+
+
 }
 
 object memModuleTester {
@@ -118,7 +130,7 @@ class  memSPM(size: Int) extends Module {
 
     val M = new Bundle() {
        val Data = UInt(INPUT, DATA_WIDTH)
-       val Addr = Bits(INPUT, log2Up(size / BYTES_PER_WORD))
+       val Addr = Bits(INPUT, log2Up(size))
        val ByteEn = UInt(INPUT, 4)
        val We = UInt(INPUT, 1)    
     }
@@ -128,14 +140,15 @@ class  memSPM(size: Int) extends Module {
     }
   }
 
-  val addrBits = log2Up(size / BYTES_PER_WORD) // Since we byte address, 
+  val addrBits = log2Up(size) // 
 
   // Vector for each connector
   val memories = Vec.fill(4) { Module(new memModule(size)).io } // Using .io here, means that we do not
                                                                 // have to write e.g.  memories(j).io.M.Data
-  val dataReg = Reg(init=UInt(0, width=BYTE_WIDTH))
-  dataReg := UInt(0)
-  io.S.Data := dataReg                                                                
+  //val dataReg = Reg(init=UInt(0, width=BYTE_WIDTH))
+  //dataReg := UInt(0)
+  // For default value of io.s.data
+  io.S.Data := UInt(0)                                                                
 
   // Connect memories with the SSPM
   for (j <- 0 until 4) {
@@ -167,6 +180,8 @@ class memSPMTester(dut: memSPM) extends Tester(dut) {
     poke(dut.io.M.We, 1)      
 
     step(1)
+    poke(dut.io.M.We, 0)      
+
   }
 
   def wr_test(data: BigInt) = {
@@ -207,6 +222,39 @@ class memSPMTester(dut: memSPM) extends Tester(dut) {
   // Test writing 2 bytes at the same time
   wr(0, Bits("hffffffff").litValue(), Bits("b1001").litValue())
   wr_test(Bits("hff0000ff").litValue())  
+
+  // Write test
+  wr(0, 1, Bits("b1111").litValue())
+  wr_test(1)
+
+  wr(4, 2, Bits("b1111").litValue())
+  wr_test(2)  
+
+  // Read back again
+
+  poke(dut.io.M.Addr, 0)  
+  step(1)
+  wr_test(1)
+
+  poke(dut.io.M.Addr, 4)  
+  step(1)
+  wr_test(2)  
+
+  //Test for different addresses 
+  wr(0, 1, Bits("b1111").litValue())
+  wr_test(1)
+
+  wr(10, 2, Bits("b1111").litValue())
+  wr_test(2)   
+
+  poke(dut.io.M.Addr, 0)  
+  step(1)
+  wr_test(1)  
+
+  poke(dut.io.M.Addr, 10)  
+  step(1)
+  wr_test(2)   
+ 
 }
 
 
