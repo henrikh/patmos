@@ -85,46 +85,46 @@ volatile _SPM struct PACKET_T* packet_at_index(coreid_t coreNr, int packet_index
 }
 
 int send( coreid_t receiver, struct PACKET_T packet){
-	printf("Enter sender(%x, {payload=%x, sender=%x}).\n", receiver, packet.payload, packet.sender);
+	//printf("Enter sender(%x, {payload=%x, sender=%x}).\n", receiver, packet.payload, packet.sender);
 	int result;
 
 	//get channel header
 	volatile _SPM struct CHANNEL_T *chan = channel_of(receiver);
 	
-	printf("Channel %x is receiver, address = %x.\n", receiver, chan);
+	//printf("Channel %x is receiver, address = %x.\n", receiver, chan);
 	
-	printf("Locking channel %x.\n", receiver);
+	//printf("Locking channel %x.\n", receiver);
 	//Lock channel
 	lock(&(chan->lock));
 	
-	printf("Channel %x lock = %x.\n", receiver, chan->lock);
+	//printf("Channel %x lock = %x.\n", receiver, chan->lock);
 
 	if( chan->size == channel_capacity ){
 		//If the channel is full do nothing and return 0
 		result = 0;
-		printf("Channel %x is full, size = %x.\n", receiver, chan->size);
+		//printf("Channel %x is full, size = %x.\n", receiver, chan->size);
 	}else{
 		//Find the address to put packet
 		volatile _SPM struct PACKET_T *nextP = 
 						packet_at_index(receiver, (chan->head + chan->size));
-		printf("Address of packet in channel = %x\n", nextP);
+		//printf("Address of packet in channel = %x\n", nextP);
 
 		//insert the packet
 		nextP->payload = packet.payload;
 		nextP->sender = packet.sender;
 		
-		printf("Inserted into packet: payload = %x, sender = %x.\n", nextP->payload, nextP->sender);		
+		//printf("Inserted into packet: payload = %x, sender = %x.\n", nextP->payload, nextP->sender);		
 		volatile _SPM struct PACKET_T *p2 = 0xF004000c;
-		printf("-----------------payload=%x, sender=%x.\n", p2->payload, p2->sender);
+		//printf("-----------------payload=%x, sender=%x.\n", p2->payload, p2->sender);
 		//Update the channel header
 		chan->size = chan->size + 1;
 		volatile _SPM struct PACKET_T *p1 = 0xF004000c;
-		printf("-----------------payload=%x, sender=%x.\n", p1->payload, p1->sender);
+		//printf("-----------------payload=%x, sender=%x.\n", p1->payload, p1->sender);
 
-		printf("Address of chan->size = %x.\n", &(chan->size));
-		printf("Address of nextP->sender = %x.\n", &(nextP->sender));
+		//printf("Address of chan->size = %x.\n", &(chan->size));
+		//printf("Address of nextP->sender = %x.\n", &(nextP->sender));
 
-		printf("Updated channel %x to {size=%x, head=%x}.\n", receiver, chan->size, chan->head);
+		//printf("Updated channel %x to {size=%x, head=%x}.\n", receiver, chan->size, chan->head);
 		
 		//return 1
 		result = 1;
@@ -133,55 +133,55 @@ int send( coreid_t receiver, struct PACKET_T packet){
 	//Release the channel
 	release(&(chan->lock));
 	
-	printf("channel %x lock released, lock = %x.\n", receiver, chan->lock);
+	//printf("channel %x lock released, lock = %x.\n", receiver, chan->lock);
 	
-	printf("Exit sender() = %x.\n", result);
+	//printf("Exit sender() = %x.\n", result);
 	return result;
 }
 
 struct PACKET_OPTION receive(coreid_t receiver){
-	printf("Enter reveive(%x).\n", receiver);
+	//printf("Enter reveive(%x).\n", receiver);
 	
 	struct PACKET_OPTION p;	
 
 	//get channel header
 	volatile _SPM struct CHANNEL_T *chan = channel_of(receiver);	
-	printf("Channel %x address=%x.\n", receiver, chan);	
-	printf("Locking channel %x.\n", receiver);
+	//printf("Channel %x address=%x.\n", receiver, chan);	
+	//printf("Locking channel %x.\n", receiver);
 	//Lock channel
 	lock(&(chan->lock));
-	printf("Channel %x lock=%x.\n", receiver, chan->lock);
+	//printf("Channel %x lock=%x.\n", receiver, chan->lock);
 	
 	
 	if(chan->size == 0){
 		//Channel is empty, return an invalid packet
 		p.valid = 0;
-		printf("Channel %x is empty, size=%x.\n", receiver, chan->size);
+		//printf("Channel %x is empty, size=%x.\n", receiver, chan->size);
 	}else{
 		//Find the address of the packet to extract
 		volatile _SPM struct PACKET_T *packet_address = 
 			packet_at_index(receiver, chan->head);
 		
-		printf("Address of packet = %x.\n", packet_address);		
-		printf("Contents of packet {payload=%x, sender=%x}.\n", packet_address->payload, packet_address->sender);
+		//printf("Address of packet = %x.\n", packet_address);		
+		//printf("Contents of packet {payload=%x, sender=%x}.\n", packet_address->payload, packet_address->sender);
 		
 		//Extract the packet
 		p.packet.payload = packet_address->payload;
 		p.packet.sender = packet_address->sender;
 		p.valid = 1;
 
-		printf("Extracted packet {payload=%x, sender=%x}.\n", p.packet.payload, p.packet.sender);
+		//printf("Extracted packet {payload=%x, sender=%x}.\n", p.packet.payload, p.packet.sender);
 
 		//update channel header
 		(chan->size)--;
 		chan->head = (chan->head + 1) % channel_capacity;
-		printf("Updated channel %x to {size=%x, head=%x}.\n", receiver, chan->size, chan->head);
+		//printf("Updated channel %x to {size=%x, head=%x}.\n", receiver, chan->size, chan->head);
 	}
 
 	//Release the channel
 	release(&(chan->lock));
 	
-	printf("Exit receive() = {packet={payload=%x, sender=%x}, valid=%x}.\n", p.packet.payload, p.packet.sender, p.valid);
+	//printf("Exit receive() = {packet={payload=%x, sender=%x}, valid=%x}.\n", p.packet.payload, p.packet.sender, p.valid);
 	return p;
 }
 

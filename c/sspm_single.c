@@ -23,18 +23,18 @@ void f1(){
 	
 	send(get_cpuid(), p);
 	
-	printf("Sent payload: %x\n", p.payload);
+	printf("Sent: {%x,%x}\n", p.payload, p.sender);
 	
 	struct PACKET_OPTION option = receive(get_cpuid());
 	
 	if( !option.valid ){
 		printf("Could not receive expected value.\n");
 	}else{
-		printf("Received value: %x.\n", option.packet.payload);
+		printf("Received value: {%x,%x}.\n", option.packet.payload, option.packet.sender);
 	}
 }
 
-void nonWorking(){
+void verifyMemoryMapping(){
 	initialize_all_channels();
 	volatile _SPM int *p = 0xF0040000;
 	volatile _SPM int *p2 = 0xF0040010;
@@ -52,11 +52,11 @@ void nonWorking(){
 }
 
 int main(){
-	//f1();
-	nonWorking();
+	f1();
+	//verifyMemoryMapping();
 	
 }
-
+//
 
 
 
