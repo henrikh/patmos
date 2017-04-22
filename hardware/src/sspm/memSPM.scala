@@ -40,16 +40,33 @@ class memModule(size: Int) extends Module {
   // here, we dot it in BYTE_WIDTH = 8.
   val syncMem = Mem(UInt(width=BYTE_WIDTH), size / BYTES_PER_WORD, seqRead=true)
 
-  io.S.Data := Bits(0)
+  //io.S.Data := Bits(0)
 
   // Please note: the manual states that single-ported SRAMS can be inferred
   // when the read and write conditons are mutually exclusie in the same when chain.
+
+  // write
   when(io.M.We === UInt(1) && io.M.blockEnable === UInt(1)) {
       syncMem(io.M.Addr) := io.M.Data
 
-  }.otherwise{ 
-    io.S.Data := syncMem(io.M.Addr) 
   }
+
+  // read
+  val rdAddrReg = Reg(next = io.M.Addr)
+  io.S.Data := syncMem(rdAddrReg) 
+
+
+  // // read
+  // val rdAddrReg = Reg(next = io.rdAddr)
+  // io.rdData := mem(rdAddrReg)
+
+  // if (bypass) {
+  //   // force read during write behavior
+  //   when (Reg(next = io.wrEna) === Bits(1) &&
+  //         Reg(next = io.wrAddr) === rdAddrReg) {
+  //           io.rdData := Reg(next = io.wrData)
+  //         }
+  // }  
 
   //io.S.Data := syncMem(io.M.Addr)
 

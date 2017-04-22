@@ -18,15 +18,15 @@ int main(){
 }
 
 int task3(){
-	int parameters[2] = {1,0};
+	int parameters[NR_CORES-1] = {1,0,0};
 	corethread_t i;
-	for(i = 1; i< 3; i++){
+	for(i = 1; i< NR_CORES; i++){
 		corethread_create(&i, &circular_passing, parameters + (i-1));
 	}
 
 	
 	int *res;
-	for(i = 0; i < 3; i++){
+	for(i = 0; i < NR_CORES; i++){
 		corethread_join(i, (void **) &res);
 	}
 	

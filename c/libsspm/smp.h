@@ -28,9 +28,9 @@ Atomicity is assumed managed by the TDMA.
 #include <machine/rtc.h>
 #include "atomic.h"
 
-#define NR_CORES 3
-#define TOTAL_SHARED_MEMORY 0xFFFF 		//65535 decimal bytes
-#define LOWEST_SPM_ADDRESS (0xF0040000)	//The lowest address mapped to the SPM
+#define NR_CORES (4)
+#define TOTAL_SHARED_MEMORY (0x400) 		//65535 decimal bytes
+#define LOWEST_SPM_ADDRESS (0xF00A0000)	//The lowest address mapped to the SPM
 
 /// \brief A type to identify a core.
 typedef int coreid_t;
