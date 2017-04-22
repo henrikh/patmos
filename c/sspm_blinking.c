@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <machine/patmos.h>
 #include "libcorethread/corethread.c"
-#include "lib_sspm/smp.h"
-#include "lib_sspm/smp.c"
-#include "lib_sspm/atomic.c"
+#include "libsspm/smp.h"
 
 
 #define LED ( *( ( volatile _IODEV unsigned * ) 0xF0090000))
@@ -20,15 +18,15 @@ int main(){
 }
 
 int task3(){
-	int parameters[2] = {1,0};
+	int parameters[NR_CORES-1] = {1,0,0};
 	corethread_t i;
-	for(i = 1; i< 3; i++){
+	for(i = 1; i< NR_CORES; i++){
 		corethread_create(&i, &circular_passing, parameters + (i-1));
 	}
 
 	
 	int *res;
-	for(i = 0; i < 3; i++){
+	for(i = 0; i < NR_CORES; i++){
 		corethread_join(i, (void **) &res);
 	}
 	
