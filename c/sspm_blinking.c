@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <machine/patmos.h>
 #include "libcorethread/corethread.c"
-#include "lib_sspm/smp.h"
-#include "lib_sspm/smp.c"
-#include "lib_sspm/atomic.c"
+#include "libsspm/smp.h"
 
 
 #define LED ( *( ( volatile _IODEV unsigned * ) 0xF0090000))

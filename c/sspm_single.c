@@ -54,7 +54,6 @@ void verifyMemoryMapping(){
 int main(){
 	f1();
 	//verifyMemoryMapping();
-	
 }
 //
 
