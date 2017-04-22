@@ -26,7 +26,7 @@ int task3(){
 
 	
 	int *res;
-	for(i = 0; i < NR_CORES; i++){
+	for(i = 1; i < NR_CORES; i++){
 		corethread_join(i, (void **) &res);
 	}
 	
