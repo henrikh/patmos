@@ -56,7 +56,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   val scheduler = Module(new Scheduler(nConnectors))
   val decoder = UIntToOH(scheduler.io.out, nConnectors)
 
-  scheduler.io.done := Bool(true)
+  scheduler.io.done := Bool(true) // Set scheduler to start
 
   // Connect the SSPMConnector with the SSPMAegean
   for (j <- 0 until nConnectors) {
@@ -89,73 +89,86 @@ object SSPMAegeanMain {
  * Test the SSPMAegean design
  */
 class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
-  def idle() = {
-    poke(dut.io(1).M.Cmd, OcpCmd.IDLE.litValue())
-    poke(dut.io(1).M.Addr, 0)
-    poke(dut.io(1).M.Data, 0)
-    poke(dut.io(1).M.ByteEn, Bits("b0000").litValue())
+  def idle(core: Int) = {
+    poke(dut.io(core).M.Cmd, OcpCmd.IDLE.litValue())
+    poke(dut.io(core).M.Addr, 0)
+    poke(dut.io(core).M.Data, 0)
+    poke(dut.io(core).M.ByteEn, Bits("b0000").litValue())
   }
 
-  def wr(addr: BigInt, data: BigInt, byteEn: BigInt) = {
-    poke(dut.io(1).M.Cmd, OcpCmd.WR.litValue())
-    poke(dut.io(1).M.Addr, addr)
-    poke(dut.io(1).M.Data, data)
-    poke(dut.io(1).M.ByteEn, byteEn)
+  def wr(addr: BigInt, data: BigInt, byteEn: BigInt, core: Int) = {
+    poke(dut.io(core).M.Cmd, OcpCmd.WR.litValue())
+    poke(dut.io(core).M.Addr, addr)
+    poke(dut.io(core).M.Data, data)
+    poke(dut.io(core).M.ByteEn, byteEn)
   }
 
-  def rd(addr: BigInt, byteEn: BigInt) = {
-    poke(dut.io(1).M.Cmd, OcpCmd.RD.litValue())
-    poke(dut.io(1).M.Addr, addr)
-    poke(dut.io(1).M.Data, 0)
-    poke(dut.io(1).M.ByteEn, byteEn)
+  def rd(addr: BigInt, byteEn: BigInt, core: Int) = {
+    poke(dut.io(core).M.Cmd, OcpCmd.RD.litValue())
+    poke(dut.io(core).M.Addr, addr)
+    poke(dut.io(core).M.Data, 0)
+    poke(dut.io(core).M.ByteEn, byteEn)
   }
 
   // Initial setup
   println("\nSetup initial state\n")
 
-  idle()
-
-  expect(dut.io(1).S.Resp, 0)
-
-  // Write test
-  println("\nTest write\n")
-  step(1)
-
-  wr(1, 42, Bits("b1111").litValue())
-
-  step(1)
-
-  idle()
-
-  println("\nStall until data valid\n")
-  // Stall until data valid
-  while(peek(dut.io(1).S.Resp) != OcpResp.DVA.litValue()) {
-    step(1)
+  for(i <- 0 until 4){
+  	idle(i)
   }
 
   step(1)
-  expect(dut.io(1).S.Resp, 0)
+
+  for(i <- 0 until 4){
+  	expect(dut.io(i).S.Resp, 0)
+  }  
+
+  step(1)
+
+  // Write test, write from core i to memory location,
+  // stall, it should be so that the connectors store the command
+  println("\nTest write\n")
+
+  for(i <- 0 until 4){
+	  wr(i*4, i+1, Bits("b1111").litValue(), i)  	
+    step(1)    
+  	  // Stall until data valid
+	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+      peek(dut.scheduler.io.out)
+	    step(1)
+	  }  
+
+    rd(i*4, Bits("b1111").litValue(), i)    
+    peek(dut.scheduler.io.out)
+
+    step(1)
+
+      // Stall until data valid
+    while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+      step(1)
+      peek(dut.scheduler.io.out)      
+    }      
+    expect(dut.io(i).S.Data, i+1)   
+    step(1)
+    peek(dut.scheduler.io.out)      
+
+    idle(i)
+  }
+
+  step(1)
 
   // Read  test
   println("\nRead test\n")
-  step(1)
 
-  rd(1, Bits("b1111").litValue())
-
-  step(1)
-
-  idle()
-
-  println("\nStall until data valid\n")
-  // Stall until data valid
-  while(peek(dut.io(1).S.Resp) != OcpResp.DVA.litValue()) {
-    step(1)
-  }
-
-  expect(dut.io(1).S.Data, 42)
-
-  step(1)
-  expect(dut.io(1).S.Resp, 0)
+  for(i <- 0 until 4){
+	  rd(i*4, Bits("b1111").litValue(), i)  	
+  	  // Stall until data valid
+	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+	    step(1)
+	  }  	
+	  step(2)
+  	 expect(dut.io(i).S.Data, i+1)	  	  
+  }  
 
 }
 
