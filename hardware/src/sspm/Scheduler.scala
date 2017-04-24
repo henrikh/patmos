@@ -28,7 +28,7 @@ class Scheduler(size: Int) extends Module {
     val done = Bool(INPUT)
     val out = UInt(OUTPUT, size)
   }
-  val r1 = Reg(init = UInt(0, log2Up(size)))
+  val r1 = Reg(init = UInt(0, log2Up(size))) // Output
 
   val r2 = Reg(init = UInt(0, 1)) // Used so that we only update every other cycle
 
@@ -47,7 +47,12 @@ class Scheduler(size: Int) extends Module {
     }.otherwise{
       r2 := r2 + UInt(1)    
     }
+  }.otherwise{
+    r1 := UInt(0)
+    r2 := UInt(0)
+
   }
+
   io.out := r1
 }
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -80,6 +85,8 @@ class SchedulerTester(dut: Scheduler, size: Int) extends Tester(dut) {
         step(1)
     }
   }  
+
+  step(5)
 
   // Disable progress
   poke(dut.io.done, false)

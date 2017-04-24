@@ -1,11 +1,11 @@
 /*
  * Copyright: 2017, Technical University of Denmark, DTU Compute
  * Author: Henrik Enggaard Hansen (henrik.enggaard@gmail.com)
+ *         Andreas Toftegaard Kristensen (s144026@student.dtu.dk)
  * License: Simplified BSD License
  *
- * The core of a shared scratch-pad memory
+ * The core fore a shared scratch-pad memory on Aegean
  *
- * Based upon Martin Schoeberl's ALU example
  *
  */
 
@@ -97,6 +97,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   }  
 
   // Initial setup, all cores set to idle
+
   println("\nSetup initial state\n")
 
   for(i <- 0 until size){
@@ -110,7 +111,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   }  
 
   // Write test, write from core i to memory location,
-  // stall, it should be so that the connectors store the command
+  // each core only writes once the previous core has read 
+  // its value back
 
   println("\nTest write\n")
 
@@ -122,16 +124,16 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
     step(1)    
 
-  	  // Stall until slave response
+  	// Stall until slave response
+
 	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
       peek(dut.scheduler.io.out)
       mem()        
 	    step(1)
 	  }  
 
-    // We do not wait an extra cycle, since the master can issue
-    // a new command on the same cycle as it gets a response (timing diagram)
     // Request to read back the data to determine if correct
+
     rd(i*4, Bits("b1111").litValue(), i)    
     peek(dut.scheduler.io.out)
     mem()  
@@ -139,6 +141,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
 
     // Stall until slave response
+
     while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
       peek(dut.scheduler.io.out)      
       mem()     
@@ -151,17 +154,20 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     idle(i)
   }
 
-  // Read  test
+  // Read test
 
   println("\nRead test\n")
 
   for(i <- 0 until size){
+
 	  rd(i*4, Bits("b1111").litValue(), i)  	
 
     step(1)
 
   	// Stall until data valid
+
 	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+
       peek(dut.scheduler.io.out)      
       mem() 
 	    step(1)
@@ -174,29 +180,39 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   }  
 
   // Test for expected fails
-  // byte writes uses byte enable
+  // byte writes uses byte enable and not address
   // so writing to address 1 should overwrite address 0 data
 
   println("\nTest for expected overwrite\n")
 
-
   wr(0, 1, Bits("b1111").litValue(), 0)  
+
+  step(1)
+
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }    
+
   wr(1, 2, Bits("b1111").litValue(), 1)  
 
   step(1)
 
   rd(0, Bits("b1111").litValue(), 0)  
 
+  step(1)
+
   // Stall until data valid
   while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }    
 
-  expect(dut.io(0).S.Data, 1)       
+  expect(dut.io(0).S.Data, 2)       
+
+  // We just wait long enough such that core 1 gets its response
 
   step(10)
   
-  // Have multiple cores writing at the same time and then reading
+  // Have multiple cores write at the same time and then reading
   // They should then be allowed to read once they have a response
 
   println("\nTest with multiple cores\n")
@@ -209,23 +225,27 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   wr(4, 3, Bits("b1111").litValue(), 1)  
   wr(8, 4, Bits("b1111").litValue(), 2)  
   wr(12, 5, Bits("b1111").litValue(), 3)   
+
   peek(dut.scheduler.io.out)      
 
   step(1)  
 
   while(rdResp != 4) {
+
     currentCore = peek(dut.scheduler.io.out).toInt
     mem()
 
     if(peek(dut.io(currentCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(currentCore) == 0){
 
-      // response for write, now read
-      //wrResp = wrResp + 1
+      // Receive response for write, now read
+
       rd(currentCore*4, Bits("b1111").litValue(), currentCore)  
       wrRespCores(currentCore) = 1
 
     } else if (peek(dut.io(currentCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(currentCore) == 1) {
+
       // check read
+
       rdResp = rdResp + 1      
       expect(dut.io(currentCore).S.Data, currentCore + 2)       
     }
@@ -244,5 +264,3 @@ object SSPMAegeanTester {
       }
   }
 }
-
-

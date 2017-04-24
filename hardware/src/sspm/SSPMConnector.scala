@@ -1,11 +1,14 @@
 /*
  * Copyright: 2017, Technical University of Denmark, DTU Compute
  * Author: Henrik Enggaard Hansen (henrik.enggaard@gmail.com)
+ *         Andreas Toftegaard Kristensen (s144026@student.dtu.dk)
  * License: Simplified BSD License
  *
- * The core of a shared scratch-pad memory
+ * The controller for the access to the shared scratch-pad memory
+ * for a Patmos CPU. The controller handles access to the
+ * shared scratch-pad memory based on the schedulation and
+ * commands from Patmos
  *
- * Based upon Martin Schoeberl's ALU example
  *
  */
 
@@ -23,6 +26,7 @@ import io._
 /**
  * Connection between SSPMConnector and the SSPM
  */
+
 trait SSPMConnectorSignals {
   val connectorSignals = new Bundle() {
     val enable = Bits(INPUT, 1)
@@ -43,6 +47,7 @@ trait SSPMConnectorSignals {
 /**
  * The connector for each OCP bus
  */
+
 class SSPMConnector extends CoreDevice() {
 
   // OCP pins and SSPMBackbone pins
@@ -60,13 +65,15 @@ class SSPMConnector extends CoreDevice() {
 
   val state = Reg(init = s_idle)
 
-  io.connectorSignals.M.Addr := Bits(0) 
-  io.connectorSignals.M.Data := Bits(0) 
-  io.connectorSignals.M.ByteEn := Bits(0) 
-  io.connectorSignals.M.WE := Bits(0) 
+  io.connectorSignals.M.Addr := MAddrReg
+  io.connectorSignals.M.Data := MDataReg
+  io.connectorSignals.M.ByteEn := MByteEnReg
+  io.connectorSignals.M.WE := writeEnableReg
 
   io.ocp.S.Resp := respReg
   io.ocp.S.Data := io.connectorSignals.S.Data  
+
+  // State machine description (mealy-style)
 
   when(state === s_idle) {
 
@@ -136,7 +143,9 @@ object SSPMConnectorMain {
 /**
  * Test the SSPM design
  */
+
 class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
+
   def idle() = {
     poke(dut.io.ocp.M.Cmd, OcpCmd.IDLE.litValue())
     poke(dut.io.ocp.M.Addr, 0)
@@ -151,6 +160,20 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
     poke(dut.io.ocp.M.ByteEn, byteEn)
   }
 
+  def expectWr(addr: BigInt, data: BigInt, byteEn: BigInt, resp: BigInt) = {
+      expect(dut.io.connectorSignals.M.Addr, addr)
+      expect(dut.io.connectorSignals.M.Data, data)
+      expect(dut.io.connectorSignals.M.ByteEn, byteEn)
+      expect(dut.io.ocp.S.Resp, resp)
+    }
+
+  def expectRd(addr: BigInt, data: BigInt, byteEn: BigInt, resp: BigInt) = {
+      expect(dut.io.connectorSignals.M.Addr, addr)
+      expect(dut.io.connectorSignals.M.ByteEn, byteEn)
+      expect(dut.io.ocp.S.Data, data)      
+      expect(dut.io.ocp.S.Resp, resp)
+    }    
+
   def rd(addr: BigInt, byteEn: BigInt) = {
     poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
     poke(dut.io.ocp.M.Addr, addr)
@@ -158,12 +181,21 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
     poke(dut.io.ocp.M.ByteEn, byteEn)
   }
 
+  // Set to initial state
+
+  println("\nSet to initial state\n")
+
+
   idle()
   poke(dut.io.connectorSignals.enable, 0)
 
   // Write test with delayed enable
+  // expect that once enable comes on, it services the core
 
   step(1)
+
+  println("\nWrite with delayed enable\n")
+
 
   wr(1, 42, Bits("b1111").litValue())
 
@@ -171,133 +203,128 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
   idle()
 
-  expect(dut.io.connectorSignals.M.Addr, 1)
-  expect(dut.io.connectorSignals.M.Data, 42)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
-  expect(dut.io.ocp.S.Resp, 0)
+  expectWr(1, 42, Bits("b1111").litValue(), 0)
 
   step(1)
-
-  expect(dut.io.connectorSignals.M.Addr, 1)
-  expect(dut.io.connectorSignals.M.Data, 42)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
-  expect(dut.io.ocp.S.Resp, 0)
 
   poke(dut.io.connectorSignals.enable, 1)
 
+  expectWr(1, 42, Bits("b1111").litValue(), 0)
+
   step(1)
+
+  // Core will now be serviced, so unless we 
+  // perform another operation, expect that
+  // data, addr and byteEn become 0
+
   poke(dut.io.connectorSignals.enable, 0)
-
-  expect(dut.io.ocp.S.Resp, 1)
-
   idle()
 
+  expectWr(0, 0, 0, 1)
+
   step(1)
-  expect(dut.io.ocp.S.Resp, 0)
+
+  expectWr(0, 0, 0, 0)
 
   step(1)
 
   // Read test with delayed enable
 
+  println("\nRead with delayed enable\n")
+
   poke(dut.io.connectorSignals.enable, 0)
   rd(1, Bits("b1111").litValue())
 
   step(1)
+
   idle()
 
-  expect(dut.io.ocp.S.Resp, 0)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
-  expect(dut.io.connectorSignals.M.Addr, 1)
+  expectRd(1, 0, Bits("b1111").litValue(), 0)
 
   step(1)
-  expect(dut.io.ocp.S.Resp, 0)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
-  expect(dut.io.connectorSignals.M.Addr, 1)
+
+  // Core will now be serviced, so unless we 
+  // perform another operation, expect that
+  // Mdata, addr and byteEn become 0 in next cycle
 
   poke(dut.io.connectorSignals.enable, 1)
-  poke(dut.io.connectorSignals.S.Data, 42)
+  poke(dut.io.connectorSignals.S.Data, 42)  
+
+  expectRd(1, 42, Bits("b1111").litValue(), 0)
 
   step(1)
-  poke(dut.io.connectorSignals.enable, 0)
-  poke(dut.io.connectorSignals.S.Data, 0)
 
-  expect(dut.io.ocp.S.Resp, 1)
-  expect(dut.io.ocp.S.Data, 42)
+  poke(dut.io.connectorSignals.enable, 0)
+
+  expectRd(0, 42, 0, 1)
 
   // Write test with synchronous enable
 
   step(1)
+
+  println("\nWrite test with synchronous enable\n")
 
   wr(1, 42, Bits("b1111").litValue())
   poke(dut.io.connectorSignals.enable, 1)
 
-  expect(dut.io.connectorSignals.M.Addr, 0)
-  expect(dut.io.connectorSignals.M.Data, 0)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b0000").litValue())
-
-  peek(dut.io.ocp.S.Resp)
+  expectWr(1, 42, Bits("b1111").litValue(), 0)
 
   step(1)
+
   idle()
+
+  // If enable is off, expect 0
 
   poke(dut.io.connectorSignals.enable, 0)
 
-  expect(dut.io.connectorSignals.M.Addr, 1)
-  expect(dut.io.connectorSignals.M.Data, 42)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+  expectWr(0, 0, 0, 1)
 
   step(1)
 
   poke(dut.io.connectorSignals.enable, 1)
 
-  expect(dut.io.connectorSignals.M.Addr, 1)
-  expect(dut.io.connectorSignals.M.Data, 42)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+  expectWr(0, 0, 0, 0)
 
   step(1)
+
   poke(dut.io.connectorSignals.enable, 0)
 
-  expect(dut.io.ocp.S.Resp, 1)
+  expectWr(0, 0, 0, 0)
 
   step(1)
 
-  idle()
-
-  // Write test with synchronous enable
+  // Read test with synchronous enable
 
   step(1)
+
+  println("\nRead test with synchronous enable\n")
 
   rd(1, Bits("b1111").litValue())
   poke(dut.io.connectorSignals.enable, 1)
 
-  expect(dut.io.connectorSignals.M.Addr, 0)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b0000").litValue())
-
-  peek(dut.io.ocp.S.Resp)
+  expectRd(1, 42, Bits("b1111").litValue(), 0)
 
   step(1)
+
   idle()
 
   poke(dut.io.connectorSignals.enable, 0)
+  poke(dut.io.connectorSignals.S.Data, 42)
 
-  expect(dut.io.connectorSignals.M.Addr, 1)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
+  expectRd(0, 42, 0, 1)
 
   step(1)
 
   poke(dut.io.connectorSignals.enable, 1)
 
-  expect(dut.io.connectorSignals.M.Addr, 1)
-  expect(dut.io.connectorSignals.M.ByteEn, Bits("b1111").litValue())
-
-  poke(dut.io.connectorSignals.S.Data, 42)
+  expectRd(0, 42, 0, 0)
 
   step(1)
+
   poke(dut.io.connectorSignals.enable, 0)
   poke(dut.io.connectorSignals.S.Data, 0)
 
-  expect(dut.io.ocp.S.Resp, 1)
-  expect(dut.io.ocp.S.Data, 42)
+  expectRd(0, 0, 0, 0)
 
   step(1)
 
