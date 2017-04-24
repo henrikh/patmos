@@ -20,27 +20,6 @@ import ocp._
 
 import sspm._
 
-// /**
-//  * Connection between SSPMConnector and the SSPMAegean
-//  */
-// trait SSPMConnectorSignals {
-//   val connectorSignals = new Bundle() {
-//     val enable = Bits(INPUT, 1)
-
-//     val M = new Bundle() {
-//        val Data = Bits(OUTPUT, DATA_WIDTH)
-//        val Addr = Bits(OUTPUT, ADDR_WIDTH)
-//        val ByteEn = Bits(OUTPUT, 4)
-//        val WE = Bits(OUTPUT, 1)
-//     }
-
-//     val S = new Bundle() {
-//        val Data = UInt(INPUT, DATA_WIDTH)
-//     }
-//   }
-// }
-
-
 /**
  * A top level of SSPMAegean
  */
@@ -88,7 +67,7 @@ object SSPMAegeanMain {
 /**
  * Test the SSPMAegean design
  */
-class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
+class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   def idle(core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.IDLE.litValue())
     poke(dut.io(core).M.Addr, 0)
@@ -120,21 +99,22 @@ class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
   // Initial setup, all cores set to idle
   println("\nSetup initial state\n")
 
-  for(i <- 0 until 4){
+  for(i <- 0 until size){
   	idle(i)
   }
 
   step(1)
 
-  for(i <- 0 until 4){
+  for(i <- 0 until size){
   	expect(dut.io(i).S.Resp, 0)
   }  
 
   // Write test, write from core i to memory location,
   // stall, it should be so that the connectors store the command
+
   println("\nTest write\n")
 
-  for(i <- 0 until 4){
+  for(i <- 0 until size){
 
 	  wr(i*4, i+1, Bits("b1111").litValue(), i)  
     peek(dut.scheduler.io.out)
@@ -172,9 +152,10 @@ class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
   }
 
   // Read  test
+
   println("\nRead test\n")
 
-  for(i <- 0 until 4){
+  for(i <- 0 until size){
 	  rd(i*4, Bits("b1111").litValue(), i)  	
 
     step(1)
@@ -192,6 +173,65 @@ class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
     idle(i)
   }  
 
+  // Test for expected fails
+  // byte writes uses byte enable
+  // so writing to address 1 should overwrite address 0 data
+
+  println("\nTest for expected overwrite\n")
+
+
+  wr(0, 1, Bits("b1111").litValue(), 0)  
+  wr(1, 2, Bits("b1111").litValue(), 1)  
+
+  step(1)
+
+  rd(0, Bits("b1111").litValue(), 0)  
+
+  // Stall until data valid
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }    
+
+  expect(dut.io(0).S.Data, 1)       
+
+  step(10)
+  
+  // Have multiple cores writing at the same time and then reading
+  // They should then be allowed to read once they have a response
+
+  println("\nTest with multiple cores\n")
+
+  var rdResp = 0
+  var currentCore = 0
+  var wrRespCores: Array[Int] =  Array[Int](0, 0, 0, 0)  
+
+  wr(0, 2, Bits("b1111").litValue(), 0)  
+  wr(4, 3, Bits("b1111").litValue(), 1)  
+  wr(8, 4, Bits("b1111").litValue(), 2)  
+  wr(12, 5, Bits("b1111").litValue(), 3)   
+  peek(dut.scheduler.io.out)      
+
+  step(1)  
+
+  while(rdResp != 4) {
+    currentCore = peek(dut.scheduler.io.out).toInt
+    mem()
+
+    if(peek(dut.io(currentCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(currentCore) == 0){
+
+      // response for write, now read
+      //wrResp = wrResp + 1
+      rd(currentCore*4, Bits("b1111").litValue(), currentCore)  
+      wrRespCores(currentCore) = 1
+
+    } else if (peek(dut.io(currentCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(currentCore) == 1) {
+      // check read
+      rdResp = rdResp + 1      
+      expect(dut.io(currentCore).S.Data, currentCore + 2)       
+    }
+    step(1)
+  }  
+
 }
 
 object SSPMAegeanTester {
@@ -200,7 +240,7 @@ object SSPMAegeanTester {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
       () => Module(new SSPMAegean(4))) {
-        f => new SSPMAegeanTester(f)
+        f => new SSPMAegeanTester(f, 4)
       }
   }
 }

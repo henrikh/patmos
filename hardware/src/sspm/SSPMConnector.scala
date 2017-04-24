@@ -19,6 +19,27 @@ import ocp._
 
 import io._
 
+
+/**
+ * Connection between SSPMConnector and the SSPM
+ */
+trait SSPMConnectorSignals {
+  val connectorSignals = new Bundle() {
+    val enable = Bits(INPUT, 1)
+
+    val M = new Bundle() {
+       val Data = Bits(OUTPUT, DATA_WIDTH)
+       val Addr = Bits(OUTPUT, ADDR_WIDTH)
+       val ByteEn = Bits(OUTPUT, 4)
+       val WE = Bits(OUTPUT, 1)
+    }
+
+    val S = new Bundle() {
+       val Data = UInt(INPUT, DATA_WIDTH)
+    }
+  }
+}
+
 /**
  * The connector for each OCP bus
  */
@@ -29,44 +50,78 @@ class SSPMConnector extends CoreDevice() {
 
   val respReg = Reg(init = OcpResp.NULL)
   val writeEnableReg = Reg(init = Bits(0, width = 1))
-  val MAddrReg = Reg(init = Bits(width = ADDR_WIDTH))
-  val MDataReg = Reg(init = Bits(width = DATA_WIDTH))
-  //val SDataReg = Reg(init = Bits(width = DATA_WIDTH))
-  val MByteEnReg = Reg(init = Bits(width = 4))
-  val armedReg = Reg(init = Bits(0, width = 1))
+  val MAddrReg = Reg(init = Bits(0, width = ADDR_WIDTH))
+  val MDataReg = Reg(init = Bits(0, width = DATA_WIDTH))
+  val MByteEnReg = Reg(init = Bits(0, width = 4))
 
   respReg := OcpResp.NULL
 
-  when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
-    MAddrReg := io.ocp.M.Addr
-    MByteEnReg := io.ocp.M.ByteEn
-    armedReg := Bits(1)
+  val s_idle :: s_waiting :: Nil = Enum(UInt(), 2)
+
+  val state = Reg(init = s_idle)
+
+  io.connectorSignals.M.Addr := Bits(0) 
+  io.connectorSignals.M.Data := Bits(0) 
+  io.connectorSignals.M.ByteEn := Bits(0) 
+  io.connectorSignals.M.WE := Bits(0) 
+
+  io.ocp.S.Resp := respReg
+  io.ocp.S.Data := io.connectorSignals.S.Data  
+
+  when(state === s_idle) {
+
+    when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
+
+      when(io.connectorSignals.enable === Bits(1)) {
+
+        io.connectorSignals.M.Addr := io.ocp.M.Addr
+        io.connectorSignals.M.Data := io.ocp.M.Data
+        io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
+        io.connectorSignals.M.WE := io.ocp.M.Cmd(0)  
+        respReg := OcpResp.DVA
+
+      }.otherwise{
+
+        MAddrReg := io.ocp.M.Addr
+        MByteEnReg := io.ocp.M.ByteEn        
+        MDataReg := io.ocp.M.Data
+        writeEnableReg := io.ocp.M.Cmd(0)
+
+        state := s_waiting
+
+      }
+
+    }.otherwise {
+
+      state := s_idle
+
+    }
+
   }
 
-  when(io.ocp.M.Cmd === OcpCmd.WR) {
-    MDataReg := io.ocp.M.Data
-    writeEnableReg := Bits(1)
-  }
+  when (state === s_waiting) {
 
-  when(io.connectorSignals.enable === Bits(1)) {
+    when(io.connectorSignals.enable === Bits(1)) {
 
-    when(armedReg === Bits(1)) {
-      respReg := OcpResp.DVA
-      armedReg := Bits(0)
+      io.connectorSignals.M.Addr := MAddrReg
+      io.connectorSignals.M.Data := MDataReg
+      io.connectorSignals.M.ByteEn := MByteEnReg
+      io.connectorSignals.M.WE := writeEnableReg
+      respReg := OcpResp.DVA      
+
+      state := s_idle      
+
       writeEnableReg := Bits(0)
       MAddrReg := Bits(0)
       MDataReg := Bits(0)
       MByteEnReg := Bits(0)
+
+    }.otherwise {
+
+      state := s_waiting
+
     }
   }
-
-  io.ocp.S.Resp := respReg
-
-  io.connectorSignals.M.Addr := MAddrReg
-  io.connectorSignals.M.Data := MDataReg
-  io.connectorSignals.M.ByteEn := MByteEnReg
-  io.connectorSignals.M.WE := writeEnableReg
-  io.ocp.S.Data := io.connectorSignals.S.Data
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
