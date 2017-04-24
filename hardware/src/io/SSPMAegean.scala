@@ -110,7 +110,14 @@ class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
     poke(dut.io(core).M.ByteEn, byteEn)
   }
 
-  // Initial setup
+  def mem() = {
+    peek(dut.mem.io.M.Data)
+    peek(dut.mem.io.M.Addr)
+    peek(dut.mem.io.M.We)
+    peek(dut.mem.io.S.Data) 
+  }  
+
+  // Initial setup, all cores set to idle
   println("\nSetup initial state\n")
 
   for(i <- 0 until 4){
@@ -123,51 +130,66 @@ class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
   	expect(dut.io(i).S.Resp, 0)
   }  
 
-  step(1)
-
   // Write test, write from core i to memory location,
   // stall, it should be so that the connectors store the command
   println("\nTest write\n")
 
   for(i <- 0 until 4){
-	  wr(i*4, i+1, Bits("b1111").litValue(), i)  	
+
+	  wr(i*4, i+1, Bits("b1111").litValue(), i)  
+    peek(dut.scheduler.io.out)
+    mem()   
+
     step(1)    
-  	  // Stall until data valid
+
+  	  // Stall until slave response
 	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
       peek(dut.scheduler.io.out)
+      mem()        
 	    step(1)
 	  }  
 
+    // We do not wait an extra cycle, since the master can issue
+    // a new command on the same cycle as it gets a response (timing diagram)
+    // Request to read back the data to determine if correct
     rd(i*4, Bits("b1111").litValue(), i)    
     peek(dut.scheduler.io.out)
+    mem()  
 
     step(1)
 
-      // Stall until data valid
+    // Stall until slave response
     while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
-      step(1)
       peek(dut.scheduler.io.out)      
+      mem()     
+      step(1)
     }      
+
     expect(dut.io(i).S.Data, i+1)   
-    step(1)
-    peek(dut.scheduler.io.out)      
+    mem()    
 
     idle(i)
   }
-
-  step(1)
 
   // Read  test
   println("\nRead test\n")
 
   for(i <- 0 until 4){
 	  rd(i*4, Bits("b1111").litValue(), i)  	
-  	  // Stall until data valid
+
+    step(1)
+
+  	// Stall until data valid
 	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+      peek(dut.scheduler.io.out)      
+      mem() 
 	    step(1)
 	  }  	
-	  step(2)
-  	 expect(dut.io(i).S.Data, i+1)	  	  
+
+    expect(dut.io(i).S.Data, i+1)       
+    peek(dut.scheduler.io.out)      
+    mem()
+    idle(i)
   }  
 
 }
