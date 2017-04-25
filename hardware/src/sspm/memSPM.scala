@@ -332,6 +332,17 @@ class memSPMTester(dut: memSPM) extends Tester(dut) {
 
   step(1)
   wr_test(7)   
+
+  // We now test at 8 bits
+  wr(Bits("b1011111100").litValue(), 42, Bits("b1111").litValue())
+  wr(Bits("b0011111100").litValue(), 43, Bits("b1111").litValue())
+
+  poke(dut.io.M.Addr, Bits("b1011111100").litValue())  
+  poke(dut.io.M.We, 0)      
+
+  step(1)
+  wr_test(42)    
+
 }
 
 
