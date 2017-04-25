@@ -33,26 +33,6 @@ object SSPM extends DeviceObject {
 }
 
 /**
- * Connection between SSPMConnector and the SSPM
- */
-trait SSPMConnectorSignals {
-  val connectorSignals = new Bundle() {
-    val enable = Bits(INPUT, 1)
-
-    val M = new Bundle() {
-       val Data = Bits(OUTPUT, DATA_WIDTH)
-       val Addr = Bits(OUTPUT, ADDR_WIDTH)
-       val ByteEn = Bits(OUTPUT, 4)
-       val WE = Bits(OUTPUT, 1)
-    }
-
-    val S = new Bundle() {
-       val Data = UInt(INPUT, DATA_WIDTH)
-    }
-  }
-}
-
-/**
  * The basic SSPM
  */
 class SPMemory extends Module() {
