@@ -59,6 +59,10 @@ class SSPMConnector extends CoreDevice() {
   val MDataReg = Reg(init = Bits(0, width = DATA_WIDTH))
   val MByteEnReg = Reg(init = Bits(0, width = 4))
 
+  writeEnableReg := Bits(0)
+  MAddrReg := Bits(0)
+  MDataReg := Bits(0)
+  MByteEnReg := Bits(0)    
   respReg := OcpResp.NULL
 
   val s_idle :: s_waiting :: Nil = Enum(UInt(), 2)
@@ -69,7 +73,6 @@ class SSPMConnector extends CoreDevice() {
   io.connectorSignals.M.Data := MDataReg
   io.connectorSignals.M.ByteEn := MByteEnReg
   io.connectorSignals.M.WE := writeEnableReg
-
   io.ocp.S.Resp := respReg
   io.ocp.S.Data := io.connectorSignals.S.Data  
 
@@ -93,6 +96,7 @@ class SSPMConnector extends CoreDevice() {
         MByteEnReg := io.ocp.M.ByteEn        
         MDataReg := io.ocp.M.Data
         writeEnableReg := io.ocp.M.Cmd(0)
+        respReg := OcpResp.NULL
 
         state := s_waiting
 
@@ -103,7 +107,6 @@ class SSPMConnector extends CoreDevice() {
       state := s_idle
 
     }
-
   }
 
   when (state === s_waiting) {
@@ -118,16 +121,15 @@ class SSPMConnector extends CoreDevice() {
 
       state := s_idle      
 
-      writeEnableReg := Bits(0)
-      MAddrReg := Bits(0)
-      MDataReg := Bits(0)
-      MByteEnReg := Bits(0)
-
     }.otherwise {
 
       state := s_waiting
-
     }
+    
+    MAddrReg := MAddrReg
+    MDataReg := MDataReg
+    MByteEnReg := MByteEnReg
+    writeEnableReg := writeEnableReg    
   }
 }
 
@@ -220,7 +222,7 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.enable, 0)
   idle()
 
-  expectWr(0, 0, 0, 1)
+  expectWr(1, 42, Bits("b1111").litValue(), 1)
 
   step(1)
 
@@ -256,7 +258,7 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
   poke(dut.io.connectorSignals.enable, 0)
 
-  expectRd(0, 42, 0, 1)
+  expectRd(1, 42, Bits("b1111").litValue(), 1)
 
   // Write test with synchronous enable
 
