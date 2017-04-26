@@ -45,12 +45,12 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     // Enable connectors based upon one-hot coding of scheduler
     connectors(j).connectorSignals.enable := decoder(j)
-  } 
+  }
 
   mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
-  mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.WE
+  mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -100,8 +100,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     peek(dut.mem.io.M.Data)
     peek(dut.mem.io.M.Addr)
     peek(dut.mem.io.M.We)
-    peek(dut.mem.io.S.Data) 
-  }  
+    peek(dut.mem.io.S.Data)
+  }
 
   // Initial setup, all cores set to idle
 
@@ -115,37 +115,37 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   for(i <- 0 until size){
   	expect(dut.io(i).S.Resp, 0)
-  }  
+  }
 
   // Write test, write from core i to memory location,
-  // each core only writes once the previous core has read 
+  // each core only writes once the previous core has read
   // its value back
 
   println("\nTest write\n")
 
   for(i <- 0 until size){
 
-    // Write 
+    // Write
 
-	  wr(i*4, i+1, Bits("b1111").litValue(), i)    
+	  wr(i*4, i+1, Bits("b1111").litValue(), i)
 
-    step(1)    
+    step(1)
 
 	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
 	    step(1)
-	  }  
+	  }
 
     // Request to read back the data to determine if correct
 
-    rd(i*4, Bits("b1111").litValue(), i)    
+    rd(i*4, Bits("b1111").litValue(), i)
 
     step(1)
 
     while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
       step(1)
-    }      
+    }
 
-    expect(dut.io(i).S.Data, i+1)   
+    expect(dut.io(i).S.Data, i+1)
 
     idle(i)
   }
@@ -156,7 +156,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   for(i <- 0 until size){
 
-	  rd(i*4, Bits("b1111").litValue(), i)  	
+	  rd(i*4, Bits("b1111").litValue(), i)
 
     step(1)
 
@@ -164,12 +164,12 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
 	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
 	    step(1)
-	  }  	
+	  }
 
-    expect(dut.io(i).S.Data, i+1)   
+    expect(dut.io(i).S.Data, i+1)
 
     idle(i)
-  }  
+  }
 
   // Test for expected fails
   // byte writes uses byte enable and not address
@@ -177,17 +177,17 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   println("\nTest for expected overwrite\n")
 
-  wr(0, 1, Bits("b1111").litValue(), 0)  
+  wr(0, 1, Bits("b1111").litValue(), 0)
 
   step(1)
 
-  idle(0)  
+  idle(0)
 
-  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {    
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
-  }    
+  }
 
-  wr(1, 3, Bits("b1111").litValue(), 1)  
+  wr(1, 3, Bits("b1111").litValue(), 1)
 
   step(1)
 
@@ -195,29 +195,29 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   while(peek(dut.io(1).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
-  }      
+  }
 
-  rd(0, Bits("b1111").litValue(), 0)  
+  rd(0, Bits("b1111").litValue(), 0)
 
   step(1)
 
   idle(0)
 
   // Stall until data valid
-  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) { 
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
-  }    
+  }
 
   step(1)
 
-  expect(dut.io(0).S.Data, 3)       
-  expect(dut.io(0).S.Resp, 0)       
+  expect(dut.io(0).S.Data, 3)
+  expect(dut.io(0).S.Resp, 0)
 
   step(1)
 
   for(i <- 0 until size){
     idle(i)
-  }  
+  }
 
   // We just wait long enough such that core 1 gets its response
 
@@ -231,16 +231,16 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   var rdResp = 0
   var currentCore = 0
   var prevCore = 0
-  var wrRespCores: Array[Int] =  Array[Int](0, 0, 0, 0)  
+  var wrRespCores: Array[Int] =  Array[Int](0, 0, 0, 0)
 
-  wr(0, 2, Bits("b1111").litValue(), 0)  
-  wr(4, 3, Bits("b1111").litValue(), 1)  
-  wr(8, 4, Bits("b1111").litValue(), 2)  
-  wr(12, 5, Bits("b1111").litValue(), 3)   
-      
+  wr(0, 2, Bits("b1111").litValue(), 0)
+  wr(4, 3, Bits("b1111").litValue(), 1)
+  wr(8, 4, Bits("b1111").litValue(), 2)
+  wr(12, 5, Bits("b1111").litValue(), 3)
+
   currentCore = peek(dut.scheduler.io.out).toInt
 
-  step(1)  
+  step(1)
 
   prevCore = currentCore
 
@@ -257,28 +257,28 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     if(peek(dut.io(prevCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(prevCore) == 0){
 
       // Receive response for write, now read
-      rd(prevCore*4, Bits("b1111").litValue(), prevCore)  
+      rd(prevCore*4, Bits("b1111").litValue(), prevCore)
       wrRespCores(prevCore) = 1
 
     } else if (peek(dut.io(prevCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(prevCore) == 1) {
 
       // check read
-      rdResp = rdResp + 1      
-      expect(dut.io(prevCore).S.Data, prevCore + 2)  
+      rdResp = rdResp + 1
+      expect(dut.io(prevCore).S.Data, prevCore + 2)
       idle(prevCore)
     }
 
     step(1)
 
-    prevCore = currentCore            
-    currentCore = peek(dut.scheduler.io.out).toInt    
+    prevCore = currentCore
+    currentCore = peek(dut.scheduler.io.out).toInt
 
     if(peek(dut.io(prevCore).S.Resp) == OcpResp.NULL.litValue()) {
       idle(prevCore)
-    }        
+    }
 
-      
-  }  
+
+  }
 }
 
 object SSPMAegeanTester {
