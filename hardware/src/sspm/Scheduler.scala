@@ -1,13 +1,12 @@
 /*
  * Copyright: 2017, Technical University of Denmark, DTU Compute
  * Author: Henrik Enggaard Hansen (henrik.enggaard@gmail.com)
+ *         Andreas Toftegaard Kristensen (s144026@student.dtu.dk)
  * License: Simplified BSD License
  *
- * The scheduler for a shared scratch-pad memory
+ * The scheduler used in arbitration for a shared scratch-pad memory
  *
  * The scheduler takes the input-flag 'done' which specifies that the prior CPU is done and now wants to give access to the next CPU in the line.
- * The output is delayed with one clock cycle based on the register output.
- *
  *
  */
 
@@ -27,7 +26,7 @@ class Scheduler(size: Int) extends Module {
     val done = Bool(INPUT)
     val out = UInt(OUTPUT, size)
   }
-  val r1 = Reg(init = UInt(0, log2Up(size)))
+  val r1 = Reg(init = UInt(0, log2Up(size))) // Output
 
   when (io.done) {
     r1 := r1 + UInt(1)
@@ -35,7 +34,8 @@ class Scheduler(size: Int) extends Module {
     when ( r1 >= UInt(size - 1) ) {
       r1 := UInt(0)
     }
-  }
+  }.otherwise {
+}
 
   io.out := r1
 }
@@ -44,7 +44,7 @@ object SchedulerMain {
   def main(args: Array[String]): Unit = {
     println("Generating the Scheduler hardware")
     chiselMain(Array("--backend", "v", "--targetDir", "generated"),
-      () => Module(new Scheduler(32)))
+      () => Module(new Scheduler(4)))
   }
 }
 
@@ -54,18 +54,39 @@ object SchedulerMain {
 class SchedulerTester(dut: Scheduler, size: Int) extends Tester(dut) {
   // Testing that it counts to the size.
   poke(dut.io.done, true)
+
   for (i <- 0 until size) {
     expect(dut.io.out, i)
     step(1)
   }
 
-  expect(dut.io.out, 0)
+  // Check that it cycles back properly
+  for (i <- 0 until size) {
+    expect(dut.io.out, i)
+    step(1)
+   }  
+
+  step(2)
 
   // Disable progress
   poke(dut.io.done, false)
 
+  var schedulerOutput = 0 
+      
+  schedulerOutput = peek(dut.io.out).toInt  
+
+  step(4)
+
+  expect(dut.io.out, schedulerOutput)
+
+  // Start progress again
+  poke(dut.io.done, true)
+
   step(1)
-  expect(dut.io.out, 0)
+
+  expect(dut.io.out, schedulerOutput+1)  
+
+
 }
 
 /**
@@ -75,8 +96,8 @@ object SchedulerTester {
   def main(args: Array[String]): Unit = {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
-      () => Module(new Scheduler(32))) {
-        dut => new SchedulerTester(dut, 32)
+      () => Module(new Scheduler(4))) {
+        dut => new SchedulerTester(dut, 4)
       }
   }
 }

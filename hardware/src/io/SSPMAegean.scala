@@ -1,11 +1,11 @@
 /*
  * Copyright: 2017, Technical University of Denmark, DTU Compute
  * Author: Henrik Enggaard Hansen (henrik.enggaard@gmail.com)
+ *         Andreas Toftegaard Kristensen (s144026@student.dtu.dk)
  * License: Simplified BSD License
  *
- * The core of a shared scratch-pad memory
+ * The core fore a shared scratch-pad memory on Aegean
  *
- * Based upon Martin Schoeberl's ALU example
  *
  */
 
@@ -19,27 +19,6 @@ import patmos.Constants._
 import ocp._
 
 import sspm._
-
-// /**
-//  * Connection between SSPMConnector and the SSPMAegean
-//  */
-// trait SSPMConnectorSignals {
-//   val connectorSignals = new Bundle() {
-//     val enable = Bits(INPUT, 1)
-
-//     val M = new Bundle() {
-//        val Data = Bits(OUTPUT, DATA_WIDTH)
-//        val Addr = Bits(OUTPUT, ADDR_WIDTH)
-//        val ByteEn = Bits(OUTPUT, 4)
-//        val WE = Bits(OUTPUT, 1)
-//     }
-
-//     val S = new Bundle() {
-//        val Data = UInt(INPUT, DATA_WIDTH)
-//     }
-//   }
-// }
-
 
 /**
  * A top level of SSPMAegean
@@ -56,7 +35,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   val scheduler = Module(new Scheduler(nConnectors))
   val decoder = UIntToOH(scheduler.io.out, nConnectors)
 
-  scheduler.io.done := Bool(true)
+  scheduler.io.done := Bool(true) // Set scheduler to start
 
   // Connect the SSPMConnector with the SSPMAegean
   for (j <- 0 until nConnectors) {
@@ -88,75 +67,218 @@ object SSPMAegeanMain {
 /**
  * Test the SSPMAegean design
  */
-class SSPMAegeanTester(dut: SSPMAegean) extends Tester(dut) {
-  def idle() = {
-    poke(dut.io(1).M.Cmd, OcpCmd.IDLE.litValue())
-    poke(dut.io(1).M.Addr, 0)
-    poke(dut.io(1).M.Data, 0)
-    poke(dut.io(1).M.ByteEn, Bits("b0000").litValue())
+class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
+
+  // Set CPU core idle
+  // It is important that this is done if
+  // you want to work with the same address later on
+  def idle(core: Int) = {
+    poke(dut.io(core).M.Cmd, OcpCmd.IDLE.litValue())
+    poke(dut.io(core).M.Addr, 0)
+    poke(dut.io(core).M.Data, 0)
+    poke(dut.io(core).M.ByteEn, Bits("b0000").litValue())
   }
 
-  def wr(addr: BigInt, data: BigInt, byteEn: BigInt) = {
-    poke(dut.io(1).M.Cmd, OcpCmd.WR.litValue())
-    poke(dut.io(1).M.Addr, addr)
-    poke(dut.io(1).M.Data, data)
-    poke(dut.io(1).M.ByteEn, byteEn)
+  // Simulate a write instruction from Patmos
+  def wr(addr: BigInt, data: BigInt, byteEn: BigInt, core: Int) = {
+    poke(dut.io(core).M.Cmd, OcpCmd.WR.litValue())
+    poke(dut.io(core).M.Addr, addr)
+    poke(dut.io(core).M.Data, data)
+    poke(dut.io(core).M.ByteEn, byteEn)
   }
 
-  def rd(addr: BigInt, byteEn: BigInt) = {
-    poke(dut.io(1).M.Cmd, OcpCmd.RD.litValue())
-    poke(dut.io(1).M.Addr, addr)
-    poke(dut.io(1).M.Data, 0)
-    poke(dut.io(1).M.ByteEn, byteEn)
+  // Simulate a read instruction from Patmos
+  def rd(addr: BigInt, byteEn: BigInt, core: Int) = {
+    poke(dut.io(core).M.Cmd, OcpCmd.RD.litValue())
+    poke(dut.io(core).M.Addr, addr)
+    poke(dut.io(core).M.Data, 0)
+    poke(dut.io(core).M.ByteEn, byteEn)
   }
 
-  // Initial setup
+  // Check wires to shared scratch-pad memory
+  def mem() = {
+    peek(dut.mem.io.M.Data)
+    peek(dut.mem.io.M.Addr)
+    peek(dut.mem.io.M.We)
+    peek(dut.mem.io.S.Data) 
+  }  
+
+  // Initial setup, all cores set to idle
+
   println("\nSetup initial state\n")
 
-  idle()
+  for(i <- 0 until size){
+  	idle(i)
+  }
 
-  expect(dut.io(1).S.Resp, 0)
+  step(1)
 
-  // Write test
+  for(i <- 0 until size){
+  	expect(dut.io(i).S.Resp, 0)
+  }  
+
+  // Write test, write from core i to memory location,
+  // each core only writes once the previous core has read 
+  // its value back
+
   println("\nTest write\n")
-  step(1)
 
-  wr(1, 42, Bits("b1111").litValue())
+  for(i <- 0 until size){
 
-  step(1)
+    // Write 
 
-  idle()
+	  wr(i*4, i+1, Bits("b1111").litValue(), i)    
 
-  println("\nStall until data valid\n")
-  // Stall until data valid
-  while(peek(dut.io(1).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)    
+
+	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+	    step(1)
+	  }  
+
+    // Request to read back the data to determine if correct
+
+    rd(i*4, Bits("b1111").litValue(), i)    
+
     step(1)
+
+    while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+      step(1)
+    }      
+
+    expect(dut.io(i).S.Data, i+1)   
+
+    idle(i)
   }
 
-  step(1)
-  expect(dut.io(1).S.Resp, 0)
+  // Read test
 
-  // Read  test
   println("\nRead test\n")
+
+  for(i <- 0 until size){
+
+	  rd(i*4, Bits("b1111").litValue(), i)  	
+
+    step(1)
+
+  	// Stall until data valid
+
+	  while(peek(dut.io(i).S.Resp) != OcpResp.DVA.litValue()) {
+	    step(1)
+	  }  	
+
+    expect(dut.io(i).S.Data, i+1)   
+
+    idle(i)
+  }  
+
+  // Test for expected fails
+  // byte writes uses byte enable and not address
+  // so writing to address 1 should overwrite address 0 data
+
+  println("\nTest for expected overwrite\n")
+
+  wr(0, 1, Bits("b1111").litValue(), 0)  
+
   step(1)
 
-  rd(1, Bits("b1111").litValue())
+  idle(0)  
+
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {    
+    step(1)
+  }    
+
+  wr(1, 3, Bits("b1111").litValue(), 1)  
 
   step(1)
 
-  idle()
+  idle(1)
 
-  println("\nStall until data valid\n")
-  // Stall until data valid
   while(peek(dut.io(1).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
-  }
+  }      
 
-  expect(dut.io(1).S.Data, 42)
+  rd(0, Bits("b1111").litValue(), 0)  
 
   step(1)
-  expect(dut.io(1).S.Resp, 0)
 
+  idle(0)
+
+  // Stall until data valid
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) { 
+    step(1)
+  }    
+
+  step(1)
+
+  expect(dut.io(0).S.Data, 3)       
+  expect(dut.io(0).S.Resp, 0)       
+
+  step(1)
+
+  for(i <- 0 until size){
+    idle(i)
+  }  
+
+  // We just wait long enough such that core 1 gets its response
+
+  step(1)
+
+  // Have multiple cores write at the same time and then reading
+  // They should then be allowed to read once they have a response
+
+  println("\nTest with multiple cores\n")
+
+  var rdResp = 0
+  var currentCore = 0
+  var prevCore = 0
+  var wrRespCores: Array[Int] =  Array[Int](0, 0, 0, 0)  
+
+  wr(0, 2, Bits("b1111").litValue(), 0)  
+  wr(4, 3, Bits("b1111").litValue(), 1)  
+  wr(8, 4, Bits("b1111").litValue(), 2)  
+  wr(12, 5, Bits("b1111").litValue(), 3)   
+      
+  currentCore = peek(dut.scheduler.io.out).toInt
+
+  step(1)  
+
+  prevCore = currentCore
+
+  for(i <- 0 until size){
+    if(i != prevCore){
+      idle(i)
+    }
+  }
+
+  currentCore = peek(dut.scheduler.io.out).toInt
+
+  while(rdResp != size) {
+
+    if(peek(dut.io(prevCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(prevCore) == 0){
+
+      // Receive response for write, now read
+      rd(prevCore*4, Bits("b1111").litValue(), prevCore)  
+      wrRespCores(prevCore) = 1
+
+    } else if (peek(dut.io(prevCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(prevCore) == 1) {
+
+      // check read
+      rdResp = rdResp + 1      
+      expect(dut.io(prevCore).S.Data, prevCore + 2)  
+      idle(prevCore)
+    }
+
+    step(1)
+
+    prevCore = currentCore            
+    currentCore = peek(dut.scheduler.io.out).toInt    
+
+    if(peek(dut.io(prevCore).S.Resp) == OcpResp.NULL.litValue()) {
+      idle(prevCore)
+    }        
+
+      
+  }  
 }
 
 object SSPMAegeanTester {
@@ -165,9 +287,7 @@ object SSPMAegeanTester {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
       "--compile", "--targetDir", "generated"),
       () => Module(new SSPMAegean(4))) {
-        f => new SSPMAegeanTester(f)
+        f => new SSPMAegeanTester(f, 4)
       }
   }
 }
-
-
