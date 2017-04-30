@@ -177,7 +177,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   println("\nTest for expected overwrite\n")
 
-  wr(0, 1, Bits("b1111").litValue(), 0)
+  wr(4, 1, Bits("b1111").litValue(), 0)
 
   step(1)
 
@@ -187,7 +187,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
   }
 
-  wr(1, 3, Bits("b1111").litValue(), 1)
+  wr(5, 3, Bits("b1111").litValue(), 1)
 
   step(1)
 
@@ -197,7 +197,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
   }
 
-  rd(0, Bits("b1111").litValue(), 0)
+  rd(4, Bits("b1111").litValue(), 0)
 
   step(1)
 
@@ -208,9 +208,10 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
   }
 
+  expect(dut.io(0).S.Data, 3)
+
   step(1)
 
-  expect(dut.io(0).S.Data, 3)
   expect(dut.io(0).S.Resp, 0)
 
   step(1)
