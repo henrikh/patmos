@@ -287,7 +287,30 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   println("\nSynchronization\n")
 
+  rd(0, Bits("b1111").litValue(), 0)
 
+  step(1)
+
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
+  expect(dut.scheduler.io.out, 0)
+
+  rd(4, Bits("b1111").litValue(), 0)
+
+  step(1)
+
+  expect(dut.scheduler.io.out, 0)
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
+  wr(4, 1, Bits("b1111").litValue(), 0)
+
+  step(1)
+
+  expect(dut.scheduler.io.out, 1)
+
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 }
 
 object SSPMAegeanTester {
