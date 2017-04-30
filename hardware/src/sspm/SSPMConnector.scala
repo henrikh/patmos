@@ -30,6 +30,7 @@ import io._
 trait SSPMConnectorSignals {
   val connectorSignals = new Bundle() {
     val enable = Bits(INPUT, 1)
+    val syncReq = Bits(OUTPUT, 1)
 
     val M = new Bundle() {
        val Data = Bits(OUTPUT, DATA_WIDTH)
@@ -76,6 +77,14 @@ class SSPMConnector extends CoreDevice() {
   io.ocp.S.Resp := respReg
   io.ocp.S.Data := io.connectorSignals.S.Data
 
+  val syncReqReg = Reg(init = Bits(0))
+  io.connectorSignals.syncReq := syncReqReg
+
+  when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr === Bits(0)) {
+    io.connectorSignals.syncReq := Bits(1)
+    syncReqReg := Bits(1)
+  }
+
   // State machine description (mealy-style)
 
   when(state === s_idle) {
@@ -118,6 +127,8 @@ class SSPMConnector extends CoreDevice() {
       io.connectorSignals.M.ByteEn := MByteEnReg
       io.connectorSignals.M.We := writeEnableReg
       respReg := OcpResp.DVA
+
+      syncReqReg := Bits(0)
 
       state := s_idle
 
@@ -331,6 +342,30 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   step(1)
 
   idle()
+
+  // Synchronization request
+
+  step(1)
+
+  println("\nRead test with synchronous enable\n")
+
+  rd(0, Bits("b1111").litValue())
+
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  idle()
+
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+
+  expect(dut.io.connectorSignals.syncReq, 0)
 
 }
 

@@ -35,8 +35,6 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   val scheduler = Module(new Scheduler(nConnectors))
   val decoder = UIntToOH(scheduler.io.out, nConnectors)
 
-  scheduler.io.done := Bool(true) // Set scheduler to start
-
   // Connect the SSPMConnector with the SSPMAegean
   for (j <- 0 until nConnectors) {
       connectors(j).ocp.M <> io(j).M
@@ -51,6 +49,31 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
   mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
+
+  // Sync state machine
+
+  val s_idle :: s_sync_1 :: s_sync_2 :: Nil = Enum(UInt(), 3)
+
+  val state = Reg(init = s_idle)
+
+  scheduler.io.done := Bool(true) // Set scheduler to start
+
+  when(state === s_idle) {
+    scheduler.io.done := Bool(true) // Set scheduler to start
+
+    state := s_idle
+  }
+
+  when(state === s_sync_1) {
+    scheduler.io.done := Bool(false) // Set scheduler to start
+
+    state := s_sync_2
+  }
+
+  when(state === s_sync_2) {
+    scheduler.io.done := Bool(false) // Set scheduler to start
+  }
+
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
