@@ -127,7 +127,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
     // Write
 
-	  wr(i*4, i+1, Bits("b1111").litValue(), i)
+	  wr((i+1)*4, i+1, Bits("b1111").litValue(), i)
 
     step(1)
 
@@ -137,7 +137,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
     // Request to read back the data to determine if correct
 
-    rd(i*4, Bits("b1111").litValue(), i)
+    rd((i+1)*4, Bits("b1111").litValue(), i)
 
     step(1)
 
@@ -156,7 +156,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   for(i <- 0 until size){
 
-	  rd(i*4, Bits("b1111").litValue(), i)
+	  rd((i+1)*4, Bits("b1111").litValue(), i)
 
     step(1)
 
@@ -173,7 +173,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   // Test for expected fails
   // byte writes uses byte enable and not address
-  // so writing to address 1 should overwrite address 0 data
+  // so writing to address 5 should overwrite address 4 data
 
   println("\nTest for expected overwrite\n")
 
@@ -233,10 +233,10 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   var prevCore = 0
   var wrRespCores: Array[Int] =  Array[Int](0, 0, 0, 0)
 
-  wr(0, 2, Bits("b1111").litValue(), 0)
-  wr(4, 3, Bits("b1111").litValue(), 1)
-  wr(8, 4, Bits("b1111").litValue(), 2)
-  wr(12, 5, Bits("b1111").litValue(), 3)
+  wr(4, 2, Bits("b1111").litValue(), 0)
+  wr(8, 3, Bits("b1111").litValue(), 1)
+  wr(12, 4, Bits("b1111").litValue(), 2)
+  wr(16, 5, Bits("b1111").litValue(), 3)
 
   currentCore = peek(dut.scheduler.io.out).toInt
 
@@ -257,7 +257,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     if(peek(dut.io(prevCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(prevCore) == 0){
 
       // Receive response for write, now read
-      rd(prevCore*4, Bits("b1111").litValue(), prevCore)
+      rd((prevCore+1)*4, Bits("b1111").litValue(), prevCore)
       wrRespCores(prevCore) = 1
 
     } else if (peek(dut.io(prevCore).S.Resp) == OcpResp.DVA.litValue() && wrRespCores(prevCore) == 1) {
@@ -279,6 +279,14 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
 
   }
+
+  step(1)
+
+  // Synchronization
+
+  println("\nSynchronization\n")
+
+
 }
 
 object SSPMAegeanTester {
