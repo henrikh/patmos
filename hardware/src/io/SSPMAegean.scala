@@ -52,26 +52,25 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
   // Sync state machine
 
-  val s_idle :: s_sync_1 :: s_sync_2 :: Nil = Enum(UInt(), 3)
+  val s_idle :: s_sync_1 :: Nil = Enum(UInt(), 2)
 
   val state = Reg(init = s_idle)
 
   scheduler.io.done := Bool(true) // Set scheduler to start
 
   when(state === s_idle) {
-    scheduler.io.done := Bool(true) // Set scheduler to start
-
     state := s_idle
+
+    when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
+      scheduler.io.done := Bool(false)
+      state := s_sync_1
+    }
   }
 
   when(state === s_sync_1) {
     scheduler.io.done := Bool(false) // Set scheduler to start
 
-    state := s_sync_2
-  }
-
-  when(state === s_sync_2) {
-    scheduler.io.done := Bool(false) // Set scheduler to start
+    state := s_idle
   }
 
 }
