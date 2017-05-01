@@ -40,7 +40,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
       connectors(j).ocp.M <> io(j).M
       connectors(j).ocp.S <> io(j).S
       connectors(j).connectorSignals.S.Data := mem.io.S.Data
-      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(61450, width = 16)) {
+      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(0xF00A, width = 16)) {
         connectors(j).ocp.M.Cmd := io(j).M.Cmd
       }.otherwise {
         connectors(j).ocp.M.Cmd := Bits(0)
@@ -118,7 +118,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   // Simulate a write instruction from Patmos
   def wr(addr: BigInt, data: BigInt, byteEn: BigInt, core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.WR.litValue())
-    poke(dut.io(core).M.Addr, 4027187200L + addr)
+    poke(dut.io(core).M.Addr, 0xF00A0000L + addr)
     poke(dut.io(core).M.Data, data)
     poke(dut.io(core).M.ByteEn, byteEn)
   }
@@ -126,7 +126,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   // Simulate a read instruction from Patmos
   def rd(addr: BigInt, byteEn: BigInt, core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.RD.litValue())
-    poke(dut.io(core).M.Addr, 4027187200L + addr)
+    poke(dut.io(core).M.Addr, 0xF00A0000L + addr)
     poke(dut.io(core).M.Data, 0)
     poke(dut.io(core).M.ByteEn, byteEn)
   }
@@ -141,7 +141,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   // Simulate a synchronization request from Patmos
   def sync(core: Int) = {
-    rd(65535, 1, core)
+    rd(0xFFFF, 1, core)
   }
 
   // Initial setup, all cores set to idle
