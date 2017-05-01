@@ -136,7 +136,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   // Simulate a synchronization request from Patmos
   def sync(core: Int) = {
-    rd(0, 1, core)
+    rd(65535, 1, core)
   }
 
   // Initial setup, all cores set to idle
@@ -386,7 +386,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   while(peek(dut.scheduler.io.out) != 1) {
     step(1)
   }
-  
+
   expect(dut.connectors(1).connectorSignals.syncReq, 1)
 
   step(1)
