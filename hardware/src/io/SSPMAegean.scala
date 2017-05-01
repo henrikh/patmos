@@ -331,8 +331,36 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   step(1)
 
   expect(dut.scheduler.io.out, 1)
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
+  while(peek(dut.scheduler.io.out) != 0) {
+    step(1)
+    peek(dut.scheduler.io.out)
+  }
+
+  rd(0, Bits("b1111").litValue(), 0)
+
+  expect(dut.connectors(0).connectorSignals.syncReq, 1)
+
+  step(1)
+
+  peek(dut.connectors(0).connectorSignals.syncReq)
 
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+  rd(4, Bits("b1111").litValue(), 0)
+
+  step(1)
+
+  peek(dut.connectors(0).connectorSignals.syncReq)
+
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+  wr(4, 1, Bits("b1111").litValue(), 0)
+
+  step(1)
+
+  expect(dut.scheduler.io.out, 1)
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
 }
 
 object SSPMAegeanTester {
