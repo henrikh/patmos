@@ -65,7 +65,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
       scheduler.io.done := Bool(false)
-      syncCounter := UInt(1)
+      syncCounter := UInt(20)
       state := s_sync
     }
   }
