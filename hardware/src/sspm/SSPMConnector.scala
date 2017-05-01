@@ -98,6 +98,7 @@ class SSPMConnector extends CoreDevice() {
         io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
         io.connectorSignals.M.We := io.ocp.M.Cmd(0)
         respReg := OcpResp.DVA
+        syncReqReg := Bits(0)
 
       }.otherwise{
 

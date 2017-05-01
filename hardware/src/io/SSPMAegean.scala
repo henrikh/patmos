@@ -55,6 +55,8 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   val s_idle :: s_sync :: Nil = Enum(UInt(), 2)
 
   val state = Reg(init = s_idle)
+  val syncCounter = Reg(init = UInt(0))
+  syncCounter := syncCounter
 
   scheduler.io.done := Bool(true)
 
@@ -63,6 +65,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
       scheduler.io.done := Bool(false)
+      syncCounter := UInt(1)
       state := s_sync
     }
   }
@@ -70,7 +73,13 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   when(state === s_sync) {
     scheduler.io.done := Bool(false)
 
-    state := s_idle
+    syncCounter := syncCounter - UInt(1)
+
+    state := s_sync
+
+    when(syncCounter === UInt(0)) {
+      state := s_idle
+    }
   }
 
 }
@@ -335,13 +344,16 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
-  expect(dut.scheduler.io.out, 1)
+  idle(0)
+
+  expect(dut.scheduler.io.out, 0)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
+  step(1)
 
   // Request synchronization aligned exactly with the scheduler
   while(peek(dut.scheduler.io.out) != 0) {
     step(1)
-    peek(dut.scheduler.io.out)
   }
 
   sync(0)
@@ -358,22 +370,23 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
-  expect(dut.connectors(0).connectorSignals.syncReq, 0)
-  expect(dut.connectors(1).connectorSignals.syncReq, 1)
-
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
   wr(4, 1, Bits("b1111").litValue(), 0)
-
   idle(1)
+
+  expect(dut.connectors(0).connectorSignals.syncReq, 0)
+  expect(dut.connectors(1).connectorSignals.syncReq, 1)
 
   step(1)
 
   idle(0)
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
   // The next core should now be allowed to read memory
-
-  expect(dut.scheduler.io.out, 1)
-  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+  while(peek(dut.scheduler.io.out) != 1) {
+    step(1)
+  }
+  
   expect(dut.connectors(1).connectorSignals.syncReq, 1)
 
   step(1)
@@ -393,7 +406,6 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   idle(1)
 
   expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
-  expect(dut.scheduler.io.out, 2)
 
 }
 
