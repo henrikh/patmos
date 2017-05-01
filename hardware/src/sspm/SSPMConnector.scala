@@ -80,7 +80,7 @@ class SSPMConnector extends CoreDevice() {
   val syncReqReg = Reg(init = Bits(0))
   io.connectorSignals.syncReq := syncReqReg
 
-  when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr === Bits(0)) {
+  when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr === Bits(65535)) {
     io.connectorSignals.syncReq := Bits(1)
     syncReqReg := Bits(1)
   }
@@ -98,6 +98,7 @@ class SSPMConnector extends CoreDevice() {
         io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
         io.connectorSignals.M.We := io.ocp.M.Cmd(0)
         respReg := OcpResp.DVA
+        syncReqReg := Bits(0)
 
       }.otherwise{
 
