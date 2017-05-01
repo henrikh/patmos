@@ -30,12 +30,13 @@ import io._
 trait SSPMConnectorSignals {
   val connectorSignals = new Bundle() {
     val enable = Bits(INPUT, 1)
+    val syncReq = Bits(OUTPUT, 1)
 
     val M = new Bundle() {
        val Data = Bits(OUTPUT, DATA_WIDTH)
        val Addr = Bits(OUTPUT, ADDR_WIDTH)
        val ByteEn = Bits(OUTPUT, 4)
-       val WE = Bits(OUTPUT, 1)
+       val We = Bits(OUTPUT, 1)
     }
 
     val S = new Bundle() {
@@ -59,6 +60,10 @@ class SSPMConnector extends CoreDevice() {
   val MDataReg = Reg(init = Bits(0, width = DATA_WIDTH))
   val MByteEnReg = Reg(init = Bits(0, width = 4))
 
+  writeEnableReg := Bits(0)
+  MAddrReg := Bits(0)
+  MDataReg := Bits(0)
+  MByteEnReg := Bits(0)
   respReg := OcpResp.NULL
 
   val s_idle :: s_waiting :: Nil = Enum(UInt(), 2)
@@ -68,10 +73,17 @@ class SSPMConnector extends CoreDevice() {
   io.connectorSignals.M.Addr := MAddrReg
   io.connectorSignals.M.Data := MDataReg
   io.connectorSignals.M.ByteEn := MByteEnReg
-  io.connectorSignals.M.WE := writeEnableReg
-
+  io.connectorSignals.M.We := writeEnableReg
   io.ocp.S.Resp := respReg
-  io.ocp.S.Data := io.connectorSignals.S.Data  
+  io.ocp.S.Data := io.connectorSignals.S.Data
+
+  val syncReqReg = Reg(init = Bits(0))
+  io.connectorSignals.syncReq := syncReqReg
+
+  when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr === Bits(0)) {
+    io.connectorSignals.syncReq := Bits(1)
+    syncReqReg := Bits(1)
+  }
 
   // State machine description (mealy-style)
 
@@ -84,15 +96,16 @@ class SSPMConnector extends CoreDevice() {
         io.connectorSignals.M.Addr := io.ocp.M.Addr
         io.connectorSignals.M.Data := io.ocp.M.Data
         io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
-        io.connectorSignals.M.WE := io.ocp.M.Cmd(0)  
+        io.connectorSignals.M.We := io.ocp.M.Cmd(0)
         respReg := OcpResp.DVA
 
       }.otherwise{
 
         MAddrReg := io.ocp.M.Addr
-        MByteEnReg := io.ocp.M.ByteEn        
+        MByteEnReg := io.ocp.M.ByteEn
         MDataReg := io.ocp.M.Data
         writeEnableReg := io.ocp.M.Cmd(0)
+        respReg := OcpResp.NULL
 
         state := s_waiting
 
@@ -103,7 +116,6 @@ class SSPMConnector extends CoreDevice() {
       state := s_idle
 
     }
-
   }
 
   when (state === s_waiting) {
@@ -113,21 +125,22 @@ class SSPMConnector extends CoreDevice() {
       io.connectorSignals.M.Addr := MAddrReg
       io.connectorSignals.M.Data := MDataReg
       io.connectorSignals.M.ByteEn := MByteEnReg
-      io.connectorSignals.M.WE := writeEnableReg
-      respReg := OcpResp.DVA      
+      io.connectorSignals.M.We := writeEnableReg
+      respReg := OcpResp.DVA
 
-      state := s_idle      
+      syncReqReg := Bits(0)
 
-      writeEnableReg := Bits(0)
-      MAddrReg := Bits(0)
-      MDataReg := Bits(0)
-      MByteEnReg := Bits(0)
+      state := s_idle
 
     }.otherwise {
 
       state := s_waiting
-
     }
+
+    MAddrReg := MAddrReg
+    MDataReg := MDataReg
+    MByteEnReg := MByteEnReg
+    writeEnableReg := writeEnableReg
   }
 }
 
@@ -170,9 +183,9 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   def expectRd(addr: BigInt, data: BigInt, byteEn: BigInt, resp: BigInt) = {
       expect(dut.io.connectorSignals.M.Addr, addr)
       expect(dut.io.connectorSignals.M.ByteEn, byteEn)
-      expect(dut.io.ocp.S.Data, data)      
+      expect(dut.io.ocp.S.Data, data)
       expect(dut.io.ocp.S.Resp, resp)
-    }    
+    }
 
   def rd(addr: BigInt, byteEn: BigInt) = {
     poke(dut.io.ocp.M.Cmd, OcpCmd.RD.litValue())
@@ -213,14 +226,14 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
   step(1)
 
-  // Core will now be serviced, so unless we 
+  // Core will now be serviced, so unless we
   // perform another operation, expect that
   // data, addr and byteEn become 0
 
   poke(dut.io.connectorSignals.enable, 0)
   idle()
 
-  expectWr(0, 0, 0, 1)
+  expectWr(1, 42, Bits("b1111").litValue(), 1)
 
   step(1)
 
@@ -243,12 +256,12 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
   step(1)
 
-  // Core will now be serviced, so unless we 
+  // Core will now be serviced, so unless we
   // perform another operation, expect that
   // Mdata, addr and byteEn become 0 in next cycle
 
   poke(dut.io.connectorSignals.enable, 1)
-  poke(dut.io.connectorSignals.S.Data, 42)  
+  poke(dut.io.connectorSignals.S.Data, 42)
 
   expectRd(1, 42, Bits("b1111").litValue(), 0)
 
@@ -256,7 +269,7 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
 
   poke(dut.io.connectorSignals.enable, 0)
 
-  expectRd(0, 42, 0, 1)
+  expectRd(1, 42, Bits("b1111").litValue(), 1)
 
   // Write test with synchronous enable
 
@@ -329,6 +342,30 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   step(1)
 
   idle()
+
+  // Synchronization request
+
+  step(1)
+
+  println("\nRead test with synchronous enable\n")
+
+  rd(0, Bits("b1111").litValue())
+
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  idle()
+
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+
+  expect(dut.io.connectorSignals.syncReq, 0)
 
 }
 
