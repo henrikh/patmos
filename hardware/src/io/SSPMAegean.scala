@@ -50,25 +50,25 @@ class SSPMAegean(val nConnectors: Int) extends Module {
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
   mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
 
-  // Sync state machine
+  // Synchronization state machine
 
-  val s_idle :: s_sync_1 :: Nil = Enum(UInt(), 2)
+  val s_idle :: s_sync :: Nil = Enum(UInt(), 2)
 
   val state = Reg(init = s_idle)
 
-  scheduler.io.done := Bool(true) // Set scheduler to start
+  scheduler.io.done := Bool(true)
 
   when(state === s_idle) {
     state := s_idle
 
     when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
       scheduler.io.done := Bool(false)
-      state := s_sync_1
+      state := s_sync
     }
   }
 
-  when(state === s_sync_1) {
-    scheduler.io.done := Bool(false) // Set scheduler to start
+  when(state === s_sync) {
+    scheduler.io.done := Bool(false)
 
     state := s_idle
   }
@@ -333,6 +333,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   expect(dut.scheduler.io.out, 1)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
+  // Request synchronization aligned exactly with the scheduler
   while(peek(dut.scheduler.io.out) != 0) {
     step(1)
     peek(dut.scheduler.io.out)
@@ -344,22 +345,50 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
-  peek(dut.connectors(0).connectorSignals.syncReq)
-
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
   rd(4, Bits("b1111").litValue(), 0)
 
+  // Request synchronization during another reserved period
+  rd(0, Bits("b1111").litValue(), 1)
+
   step(1)
 
-  peek(dut.connectors(0).connectorSignals.syncReq)
+  expect(dut.connectors(0).connectorSignals.syncReq, 0)
+  expect(dut.connectors(1).connectorSignals.syncReq, 1)
 
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
   wr(4, 1, Bits("b1111").litValue(), 0)
 
+  idle(1)
+
   step(1)
+
+  idle(0)
+
+  // The next core should now be allowed to read memory
 
   expect(dut.scheduler.io.out, 1)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+  expect(dut.connectors(1).connectorSignals.syncReq, 1)
+
+  step(1)
+
+  // The new core is now synchronized
+
+  expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
+  rd(4, Bits("b1111").litValue(), 1)
+
+  step(1)
+
+  expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
+  wr(4, 1, Bits("b1111").litValue(), 1)
+
+  step(1)
+
+  idle(1)
+
+  expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
+  expect(dut.scheduler.io.out, 2)
 
 }
 
