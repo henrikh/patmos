@@ -39,31 +39,37 @@ void f1(){
 void verifyMemoryMapping(){
 	
 	printf("Start verifying memory mapping.\n");
-	volatile _SPM int *p = 0xF00A0000;
-	volatile _SPM int *p2 = 0xF00A0010;
-	volatile _SPM int *p3 = 0xF00A0004;
+	volatile _SPM int *p =  0xF00A0000;
+	volatile _SPM int *p2 = 0xF00A0100;
+	volatile _SPM int *p3 = 0xF00A0E00;
+	volatile _SPM int *p4 = 0xF00A0F00;
 	
 	printf("%x:%x.\n", (int) p, *p);
 	printf("%x:%x.\n", (int) p2, *p2);
 	printf("%x:%x.\n", (int) p3, *p3);
+	printf("%x:%x.\n", (int) p4, *p4);
 
 	printf("Assign %x = 0\n", (int)p);
 	*p = 0;
 	printf("Assign %x = 0\n", (int)p2);
 	*p2 = 0;
 	printf("Assign %x = 0\n", (int)p3);
-	*p2 = 0;
+	*p3 = 0;
+	printf("Assign %x = 0\n", (int)p4);
+	*p4 = 0;
 
 	printf("%x:%x.\n", (int) p, *p);
 	printf("%x:%x.\n", (int) p2, *p2);
 	printf("%x:%x.\n", (int) p3, *p3);
+	printf("%x:%x.\n", (int) p4, *p4);
 	
-	printf("Assign %x = 2\n", (int)p);
+	printf("Assign %x = 0xFFFF\n", (int)p);
 	*p = 0xFFFF;	
 
 	printf("%x:%x.\n", (int) p, *p);
 	printf("%x:%x.\n", (int) p2, *p2);
 	printf("%x:%x.\n", (int) p3, *p3);
+	printf("%x:%x.\n", (int) p4, *p4);
 
 	printf("End of verifying\n");
 }
@@ -151,10 +157,67 @@ void verifyMemoryMappingForSlaves(){
 	}
 }
 
+void slaveCompleteMemoryMapVerification(void* args){
+	
+	led_on();
+	int intervalSize = (TOTAL_SHARED_MEMORY/1);
+	int startAddr = LOWEST_SPM_ADDRESS + (intervalSize * get_cpuid());
+	int endAddr = startAddr + intervalSize ;
+	int wordCount = intervalSize/4;
+	
+	int i;
+	volatile _SPM int *p = (volatile _SPM int *) startAddr;
+
+	//reset all memory addresses
+	for(i = 0; i < wordCount; i++){
+		p[i] = 0;
+	}
+
+	int t = get_cpuid()+10,j, fail = 0;
+		
+	for(i = 0; i<wordCount; i++){
+		p[i] = t;
+		
+		for(j = 0; j <wordCount; j++){
+			if(j!=i && p[j] != 0){
+				printf("j = %x, i = %x, %x = %x\n", j,i,(int)(p+j), p[j]);
+				fail = 1;
+			}
+		}
+		p[i] = 0;
+	}
+	
+	if(fail){
+		blink(100);
+	}
+
+	led_off();
+}
+
+void completeMemoryMapVerification(){
+	/*
+		Use:
+			
+	*/
+
+	/*corethread_t i;
+	for(i = 1; i< NR_CORES; i++){
+		corethread_create(&i, &slave, NULL);
+	}*/
+	
+	slaveCompleteMemoryMapVerification(NULL);
+
+	/*int *res;
+	for(i = 1; i < NR_CORES; i++){
+		corethread_join(i, (void **) &res);
+	}*/
+}
+
 int main(){
 	//f1();
-	//verifyMemoryMapping();
-	verifyMemoryMappingForSlaves();
+	verifyMemoryMapping();
+	//verifyMemoryMappingForSlaves();
+	//completeMemoryMapVerification();
 }
 //
 
