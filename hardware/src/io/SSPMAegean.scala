@@ -125,6 +125,11 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     peek(dut.mem.io.S.Data)
   }
 
+  // Simulate a synchronization request from Patmos
+  def sync(core: Int) = {
+    rd(0, 1, core)
+  }
+
   // Initial setup, all cores set to idle
 
   println("\nSetup initial state\n")
@@ -309,7 +314,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   println("\nSynchronization\n")
 
-  rd(0, Bits("b1111").litValue(), 0)
+  sync(0)
 
   step(1)
 
@@ -339,7 +344,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     peek(dut.scheduler.io.out)
   }
 
-  rd(0, Bits("b1111").litValue(), 0)
+  sync(0)
 
   expect(dut.connectors(0).connectorSignals.syncReq, 1)
 
@@ -349,7 +354,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   rd(4, Bits("b1111").litValue(), 0)
 
   // Request synchronization during another reserved period
-  rd(0, Bits("b1111").litValue(), 1)
+  sync(1)
 
   step(1)
 
