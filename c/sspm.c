@@ -13,23 +13,28 @@
 
 int main() {
 
-	volatile _SPM int *sspm_ptr = (volatile _SPM int *) 0xF0040000;
-	volatile _SPM int *uart_ptr = (volatile _SPM int *) 0xF0080004;
-	int i, j;
+  volatile _SPM int *sspm_ptr = (volatile _SPM int *) 0xF0040000;
+  volatile _SPM int *sspm_sync = (volatile _SPM int *) 0xF004FFFF;
+  volatile _SPM int *uart_ptr = (volatile _SPM int *) 0xF0080004;
+  int i, j;
   int k = 0;
+  sspm_ptr += 1;
 
   *sspm_ptr = 0x42;
 
-	sspm_ptr += 1;
+  sspm_ptr += 1;
 
-	*sspm_ptr = 0x41;
+  *sspm_ptr = 0x41;
 
   printf("%x\n", (int) sspm_ptr);
   printf("%x\n", (int) *sspm_ptr);
 
-	sspm_ptr -= 1;
+  sspm_ptr -= 1;
 
   printf("%x\n", (int) *sspm_ptr);
 
-  putchar('1');
+  i = *sspm_ptr;
+  *sspm_ptr = 0x01;
+  i = *sspm_sync;
+  *sspm_ptr = 0x01;
 }
