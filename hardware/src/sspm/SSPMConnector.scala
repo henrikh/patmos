@@ -54,21 +54,19 @@ class SSPMConnector extends CoreDevice() {
   // OCP pins and SSPMBackbone pins
   override val io = new CoreDeviceIO() with SSPMConnectorSignals
 
-  val respReg = Reg(init = OcpResp.NULL)
-  val writeEnableReg = Reg(init = Bits(0, width = 1))
-  val MAddrReg = Reg(init = Bits(0, width = ADDR_WIDTH))
-  val MDataReg = Reg(init = Bits(0, width = DATA_WIDTH))
-  val MByteEnReg = Reg(init = Bits(0, width = 4))
+  val respReg = Reg(init=OcpResp.NULL)
+  val writeEnableReg = Reg(init=io.ocp.M.Cmd(0))
+  val MAddrReg = Reg(init=io.ocp.M.Addr)
+  val MDataReg = Reg(init=io.ocp.M.Data)
+  val MByteEnReg = Reg(init=io.ocp.M.ByteEn)
+  val SDataReg = Reg(init=io.connectorSignals.S.Data)
 
-  writeEnableReg := Bits(0)
-  MAddrReg := Bits(0)
-  MDataReg := Bits(0)
-  MByteEnReg := Bits(0)
   respReg := OcpResp.NULL
-
-  val s_idle :: s_waiting :: Nil = Enum(UInt(), 2)
-
-  val state = Reg(init = s_idle)
+  writeEnableReg := io.ocp.M.Cmd(0)
+  MAddrReg := io.ocp.M.Addr
+  MDataReg := io.ocp.M.Data
+  MByteEnReg := io.ocp.M.ByteEn
+  SDataReg := io.connectorSignals.S.Data
 
   io.connectorSignals.M.Addr := MAddrReg
   io.connectorSignals.M.Data := MDataReg
@@ -76,6 +74,11 @@ class SSPMConnector extends CoreDevice() {
   io.connectorSignals.M.We := writeEnableReg
   io.ocp.S.Resp := respReg
   io.ocp.S.Data := io.connectorSignals.S.Data
+
+  val s_idle :: s_waiting :: Nil = Enum(UInt(), 2)
+
+  val state = Reg(init = s_idle)
+  state := state
 
   val syncReqReg = Reg(init = Bits(0))
   io.connectorSignals.syncReq := syncReqReg
@@ -85,52 +88,27 @@ class SSPMConnector extends CoreDevice() {
   }.otherwise {
     syncReqReg := syncReqReg
   }
-
-  // State machine description (mealy-style)
-
+  
   when(state === s_idle) {
-
     when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
-
-      MAddrReg := io.ocp.M.Addr
-      MByteEnReg := io.ocp.M.ByteEn
-      MDataReg := io.ocp.M.Data
-      writeEnableReg := io.ocp.M.Cmd(0)
-      respReg := OcpResp.NULL
-
       state := s_waiting
-
-    }.otherwise {
-
-      state := s_idle
-
     }
   }
-
-  when (state === s_waiting) {
+  
+  when(state === s_waiting) {
 
     when(io.connectorSignals.enable === Bits(1)) {
-
-      io.connectorSignals.M.Addr := MAddrReg
-      io.connectorSignals.M.Data := MDataReg
-      io.connectorSignals.M.ByteEn := MByteEnReg
-      io.connectorSignals.M.We := writeEnableReg
       respReg := OcpResp.DVA
-
       syncReqReg := Bits(0)
-
       state := s_idle
-
     }.otherwise {
-
-      state := s_waiting
+      writeEnableReg := writeEnableReg
+      MAddrReg := MAddrReg
+      MDataReg := MDataReg
+      MByteEnReg := MByteEnReg
     }
-
-    MAddrReg := MAddrReg
-    MDataReg := MDataReg
-    MByteEnReg := MByteEnReg
-    writeEnableReg := writeEnableReg
   }
+
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -222,7 +200,7 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.enable, 0)
   idle()
 
-  expectWr(1, 42, Bits("b1111").litValue(), 1)
+  expectWr(0, 0, 0, 1)
 
   step(1)
 
@@ -252,13 +230,13 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.enable, 1)
   poke(dut.io.connectorSignals.S.Data, 42)
 
-  expectRd(1, 42, Bits("b1111").litValue(), 0)
+  expectRd(1, 0, Bits("b1111").litValue(), 0)
 
   step(1)
 
   poke(dut.io.connectorSignals.enable, 0)
 
-  expectRd(1, 42, Bits("b1111").litValue(), 1)
+  expectRd(0, 42, 0, 1)
 
 }
 

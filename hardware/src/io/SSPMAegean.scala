@@ -374,9 +374,9 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   sync(0)
 
-  expect(dut.connectors(0).connectorSignals.syncReq, 1)
-
   step(1)
+
+  expect(dut.connectors(0).connectorSignals.syncReq, 1)
 
   idle(0)
 
@@ -445,7 +445,7 @@ object SSPMAegeanTester {
   def main(args: Array[String]): Unit = {
     println("Testing the SSPMAegean")
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
-      "--compile", "--targetDir", "generated"),
+      "--compile", "--targetDir", "generated", "--vcd"),
       () => Module(new SSPMAegean(4))) {
         f => new SSPMAegeanTester(f, 4)
       }
