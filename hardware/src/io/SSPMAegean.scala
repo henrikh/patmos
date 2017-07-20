@@ -93,9 +93,12 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 object SSPMAegeanMain {
   def main(args: Array[String]): Unit = {
     println("Generating the SSPMAegean hardware")
-    val chiselArgs = args.slice(0,args.length) // If we later add for number of connectors,
-                                               // we shoud index in another fashion, see SRamCtrl
-    chiselMain(chiselArgs, () => Module(new SSPMAegean(4)))
+
+    val chiselArgs = args.slice(0, args.length)
+    println(chiselArgs(0))
+    val CPUCnt = args(0)
+
+    chiselMain(chiselArgs, () => Module(new SSPMAegean(CPUCnt.toInt)))
   }
 }
 
