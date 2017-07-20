@@ -342,6 +342,10 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
   expect(dut.scheduler.io.out, 0)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
@@ -350,6 +354,10 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   step(1)
 
   idle(0)
+
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
 
   expect(dut.scheduler.io.out, 0)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
@@ -367,11 +375,19 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
+  idle(0)
+
+  step(1)
+
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
   rd(4, Bits("b1111").litValue(), 0)
 
   // Request synchronization during another reserved period
   sync(1)
+
+  step(1)
+
+  idle(0)
 
   step(1)
 
@@ -385,6 +401,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   step(1)
 
   idle(0)
+
+  step(1)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
   // The next core should now be allowed to read memory
@@ -403,12 +421,18 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
+  idle(1)
+
+  step(1)
+
   expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
   wr(4, 1, Bits("b1111").litValue(), 1)
 
   step(1)
 
   idle(1)
+
+  step(1)
 
   expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
 

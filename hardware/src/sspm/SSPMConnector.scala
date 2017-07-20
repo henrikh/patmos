@@ -80,7 +80,7 @@ class SSPMConnector extends CoreDevice() {
   val syncReqReg = Reg(init = Bits(0))
   io.connectorSignals.syncReq := syncReqReg
 
-  when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr === Bits(0xF00AFFFFL)) {
+  when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr(15, 2) === Fill(14, Bits(1))) {
     io.connectorSignals.syncReq := Bits(1)
     syncReqReg := Bits(1)
   }
@@ -91,26 +91,13 @@ class SSPMConnector extends CoreDevice() {
 
     when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
 
-      when(io.connectorSignals.enable === Bits(1)) {
+      MAddrReg := io.ocp.M.Addr
+      MByteEnReg := io.ocp.M.ByteEn
+      MDataReg := io.ocp.M.Data
+      writeEnableReg := io.ocp.M.Cmd(0)
+      respReg := OcpResp.NULL
 
-        io.connectorSignals.M.Addr := io.ocp.M.Addr
-        io.connectorSignals.M.Data := io.ocp.M.Data
-        io.connectorSignals.M.ByteEn := io.ocp.M.ByteEn
-        io.connectorSignals.M.We := io.ocp.M.Cmd(0)
-        respReg := OcpResp.DVA
-        syncReqReg := Bits(0)
-
-      }.otherwise{
-
-        MAddrReg := io.ocp.M.Addr
-        MByteEnReg := io.ocp.M.ByteEn
-        MDataReg := io.ocp.M.Data
-        writeEnableReg := io.ocp.M.Cmd(0)
-        respReg := OcpResp.NULL
-
-        state := s_waiting
-
-      }
+      state := s_waiting
 
     }.otherwise {
 
@@ -271,102 +258,6 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.enable, 0)
 
   expectRd(1, 42, Bits("b1111").litValue(), 1)
-
-  // Write test with synchronous enable
-
-  step(1)
-
-  println("\nWrite test with synchronous enable\n")
-
-  wr(1, 42, Bits("b1111").litValue())
-  poke(dut.io.connectorSignals.enable, 1)
-
-  expectWr(1, 42, Bits("b1111").litValue(), 0)
-
-  step(1)
-
-  idle()
-
-  // If enable is off, expect 0
-
-  poke(dut.io.connectorSignals.enable, 0)
-
-  expectWr(0, 0, 0, 1)
-
-  step(1)
-
-  poke(dut.io.connectorSignals.enable, 1)
-
-  expectWr(0, 0, 0, 0)
-
-  step(1)
-
-  poke(dut.io.connectorSignals.enable, 0)
-
-  expectWr(0, 0, 0, 0)
-
-  step(1)
-
-  // Read test with synchronous enable
-
-  step(1)
-
-  println("\nRead test with synchronous enable\n")
-
-  rd(1, Bits("b1111").litValue())
-  poke(dut.io.connectorSignals.enable, 1)
-
-  expectRd(1, 42, Bits("b1111").litValue(), 0)
-
-  step(1)
-
-  idle()
-
-  poke(dut.io.connectorSignals.enable, 0)
-  poke(dut.io.connectorSignals.S.Data, 42)
-
-  expectRd(0, 42, 0, 1)
-
-  step(1)
-
-  poke(dut.io.connectorSignals.enable, 1)
-
-  expectRd(0, 42, 0, 0)
-
-  step(1)
-
-  poke(dut.io.connectorSignals.enable, 0)
-  poke(dut.io.connectorSignals.S.Data, 0)
-
-  expectRd(0, 0, 0, 0)
-
-  step(1)
-
-  idle()
-
-  // Synchronization request
-
-  step(1)
-
-  println("\nRead test with synchronous enable\n")
-
-  rd(0, Bits("b1111").litValue())
-
-  expect(dut.io.connectorSignals.syncReq, 1)
-
-  step(1)
-
-  idle()
-
-  expect(dut.io.connectorSignals.syncReq, 1)
-
-  step(1)
-
-  poke(dut.io.connectorSignals.enable, 1)
-
-  step(1)
-
-  expect(dut.io.connectorSignals.syncReq, 0)
 
 }
 
