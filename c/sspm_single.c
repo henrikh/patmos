@@ -40,9 +40,9 @@ void verifyMemoryMapping(){
 	
 	printf("Start verifying memory mapping.\n");
 	volatile _SPM int *p =  0xF00A0000;
-	volatile _SPM int *p2 = 0xF00A0100;
-	volatile _SPM int *p3 = 0xF00A0E00;
-	volatile _SPM int *p4 = 0xF00A0F00;
+	volatile _SPM int *p2 = 0xF00A0010;
+	volatile _SPM int *p3 = 0xF00A0100;
+	volatile _SPM int *p4 = 0xF00A0030;
 	
 	printf("%x:%x.\n", (int) p, *p);
 	printf("%x:%x.\n", (int) p2, *p2);
@@ -215,8 +215,8 @@ void completeMemoryMapVerification(){
 
 int main(){
 	//f1();
-	verifyMemoryMapping();
-	//verifyMemoryMappingForSlaves();
+	//verifyMemoryMapping();
+	verifyMemoryMappingForSlaves();
 	//completeMemoryMapVerification();
 }
 //

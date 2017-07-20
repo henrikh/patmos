@@ -140,7 +140,7 @@ int send( coreid_t receiver, struct PACKET_T packet){
 }
 
 struct PACKET_OPTION receive(coreid_t receiver){
-	//printf("Enter reveive(%x).\n", receiver);
+	printf("Enter receive(%x).\n", receiver);
 	
 	struct PACKET_OPTION p;	
 
@@ -181,7 +181,7 @@ struct PACKET_OPTION receive(coreid_t receiver){
 	//Release the channel
 	release(&(chan->lock));
 	
-	//printf("Exit receive() = {packet={payload=%x, sender=%x}, valid=%x}.\n", p.packet.payload, p.packet.sender, p.valid);
+	printf("Exit receive() = {packet={payload=%x, sender=%x}, valid=%x}.\n", p.packet.payload, p.packet.sender, p.valid);
 	return p;
 }
 

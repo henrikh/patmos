@@ -10,7 +10,7 @@ int try_lock( volatile _SPM lock_t *l){
 	int intWasOn;
 	lock_t lock_value;
 	
-	//Get s0 value
+	//Get register s0 value
 	asm volatile(
 					"mfs %0 = $s0;"
 					: "=r" (s0)
@@ -50,6 +50,11 @@ int try_lock( volatile _SPM lock_t *l){
 	}
 
 	//Return to the caller whether he now has the lock
+	if(lock_value == OPEN){
+		printf("MAIN:got lock\n");
+	}else{
+		printf("MAIN:no lock\n");
+	}
 	return  lock_value == OPEN ;
 }
 
