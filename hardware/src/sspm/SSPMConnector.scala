@@ -81,8 +81,9 @@ class SSPMConnector extends CoreDevice() {
   io.connectorSignals.syncReq := syncReqReg
 
   when(io.ocp.M.Cmd === OcpCmd.RD && io.ocp.M.Addr(15, 2) === Fill(14, Bits(1))) {
-    io.connectorSignals.syncReq := Bits(1)
     syncReqReg := Bits(1)
+  }.otherwise {
+    syncReqReg := syncReqReg
   }
 
   // State machine description (mealy-style)
