@@ -13,45 +13,48 @@ address (in the SSPM).
 
 Returns the first unused memory address after the communication channels.
 */
-int initialize_messaging(int initAt){
-	
-}
+int initialize_messaging(int initAt);
 
 /*
 Checks the communication channel to see if there is anything to receive
 */
-int can_receive_from_core(int coreNr){
-
-}
+int can_receive_from_core(int coreNr);
 
 /*
-
+Loads the contents
 */
-char[] receive_from_core(int coreNr){
-
-}
+char* receive_from_core(int coreNr);
 
 /*
 Allows the communication channel to discard anything recieved from the core,
 readying the channel for the next transmision.
 */
-void free_received_from_core(int coreNr){
-
-}
-
+void free_received_from_core(int coreNr);
 /*
 Checks the communication channel of the core to see if it is ready to send.
 */
-int can_send_from(int coreNr){
-
-}
+int can_send_from(int coreNr);
 
 /*
 Send the given text from the core.
 */
-void send_from_core(int coreNr, char[] text){
-	
-}
+void send_from_core(int coreNr, char *text);
+
+/*
+Get the address of the core's channel flag
+*/
+int flag_address(int coreNr);
+
+/*
+Get the address of the first address in the cores buffer in the SSPM
+*/
+int buffer_start(int coreNr);
+
+/*
+Get the address of the local channel buffer.
+*/
+char* local_buffer(int coreNr);
+
 
 
 #endif
