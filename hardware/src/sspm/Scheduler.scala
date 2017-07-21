@@ -22,19 +22,22 @@ import io._
  * A simple Scheduler, configurable counter which updates on done flag.
  */
 class Scheduler(size: Int) extends Module {
+
+  def lookahead(n:Int, waiting:Seq[Bool]):UInt = {
+    val indices = (0 until waiting.length).map((x:Int) => UInt(x))
+    PriorityMux(waiting.drop(n+1) ++ waiting.take(n+1), indices.drop(n+1) ++ indices.take(n+1))
+  }
+
   val io = new Bundle {
     val done = Bool(INPUT)
     val out = UInt(OUTPUT)
+    val lookahead = Vec.fill(size) { Bool(INPUT) }
   }
   val out = Reg(init = UInt(0, log2Up(size)))
 
-  when (io.done) {
-    out := out + UInt(1)
+  val lookaheaders = Vec((0 until size).map((x:Int) => lookahead(x, io.lookahead)))
 
-    when ( out >= UInt(size - 1) ) {
-      out := UInt(0)
-    }
-  }
+  out := lookaheaders(out)
 
   io.out := out
 }

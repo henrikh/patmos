@@ -31,6 +31,7 @@ trait SSPMConnectorSignals {
   val connectorSignals = new Bundle() {
     val enable = Bits(INPUT, 1)
     val syncReq = Bits(OUTPUT, 1)
+    val waiting = Bool(OUTPUT)
 
     val M = new Bundle() {
        val Data = Bits(OUTPUT, DATA_WIDTH)
@@ -72,6 +73,7 @@ class SSPMConnector extends CoreDevice() {
   io.connectorSignals.M.Data := MDataReg
   io.connectorSignals.M.ByteEn := MByteEnReg
   io.connectorSignals.M.We := writeEnableReg
+  io.connectorSignals.waiting := Bool(false)
   io.ocp.S.Resp := respReg
   io.ocp.S.Data := io.connectorSignals.S.Data
 
@@ -90,14 +92,17 @@ class SSPMConnector extends CoreDevice() {
   }
   
   when(state === s_idle) {
+    io.connectorSignals.waiting := Bool(false)
     when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
       state := s_waiting
     }
   }
   
   when(state === s_waiting) {
+    io.connectorSignals.waiting := Bool(true)
 
     when(io.connectorSignals.enable === Bits(1)) {
+      io.connectorSignals.waiting := Bool(false)
       respReg := OcpResp.DVA
       syncReqReg := Bits(0)
       state := s_idle

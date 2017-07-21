@@ -44,6 +44,8 @@ class SSPMAegean(val nCores: Int) extends Module {
         connectors(j).ocp.M.Cmd := Bits(0)
       }
 
+    scheduler.io.lookahead(j) := connectors(j).connectorSignals.waiting
+
     // Enable connectors based upon one-hot coding of scheduler
     connectors(j).connectorSignals.enable := decoder(j)
   }
