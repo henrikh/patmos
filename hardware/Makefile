@@ -51,7 +51,7 @@ MEMCTRLMAIN16=io.SRamMain
 MEMCTRLMAINOC=io.OCRamMain
 ARBITERMAIN=ocp.ArbiterMain
 TDMARBITERMAIN=ocp.TdmArbiterWrapperMain
-MEMSSPM=io.SSPMAegeanMain
+MEMSSPM=sspm.SSPMAegeanMain
 
 # config file for Patmos -- now just frequency
 #CONFIG=default
@@ -137,7 +137,7 @@ $(HWBUILDDIR)/TdmArbiterWrapper.v: $(SRC)
 	$(SBT) "run-main $(TDMARBITERMAIN) $(ARBITER_CNT) $(ARBITER_ADDR_WIDTH) $(ARBITER_DATA_WIDTH) $(ARBITER_BURST_LENGTH) --targetDir $(HWBUILDDIR) --cse --backend v"
 
 $(HWBUILDDIR)/SSPMAegean.v: $(SRC)
-	$(SBT) "run-main $(MEMSSPM) $(CPU_CNT) --targetDir $(HWBUILDDIR) --cse --backend v"
+	$(SBT) "run-main $(MEMSSPM) $(CORE_CNT) --targetDir $(HWBUILDDIR) --cse --backend v"
 
 # run Verilog simulation
 vsim: verilog
@@ -187,17 +187,14 @@ modcomp:
 
 # SSPM make targets
 
-SSPM:
-	$(SBT) "run-main io.SSPMMain --targetDir $(HWGENDIR) --cse --backend v"
-
 SSPM-test:
 	$(SBT) "run-main io.SSPMTester"
 
 SSPMAegean:
-	$(SBT) "run-main io.SSPMAegeanMain $(CPU_CNT) --targetDir $(HWGENDIR) --cse --backend v"
+	$(SBT) "run-main sspm.SSPMAegeanMain $(CORE_CNT) --targetDir $(HWGENDIR) --cse --backend v"
 
 SSPMAegean-test:
-	$(SBT) "run-main io.SSPMAegeanTester"	
+	$(SBT) "run-main sspm.SSPMAegeanTester"
 
 SSPM-scheduler:
 	$(SBT) "run-main sspm.SchedulerMain"

@@ -9,7 +9,7 @@
  *
  */
 
-package io
+package sspm
 
 import Chisel._
 import Node._
@@ -18,29 +18,27 @@ import patmos.Constants._
 
 import ocp._
 
-import sspm._
-
 /**
  * A top level of SSPMAegean
  */
-class SSPMAegean(val nConnectors: Int) extends Module {
+class SSPMAegean(val nCores: Int) extends Module {
 
   //override val io = new CoreDeviceIO()
 
-  val io = Vec.fill(nConnectors) { new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH) }
+  val io = Vec.fill(nCores) { new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH) }
 
   // Generate modules
   val mem = Module(new memSPM(1024))
-  val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
-  val scheduler = Module(new Scheduler(nConnectors))
-  val decoder = UIntToOH(scheduler.io.out, nConnectors)
+  val connectors = Vec.fill(nCores) { Module(new SSPMConnector()).io }
+  val scheduler = Module(new Scheduler(nCores))
+  val decoder = UIntToOH(scheduler.io.out, nCores)
 
   // Connect the SSPMConnector with the SSPMAegean
-  for (j <- 0 until nConnectors) {
+  for (j <- 0 until nCores) {
       connectors(j).ocp.M <> io(j).M
       connectors(j).ocp.S <> io(j).S
       connectors(j).connectorSignals.S.Data := mem.io.S.Data
-      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(0xF00A, width = 16)) {
+      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(0xF00B, width = 16)) {
         connectors(j).ocp.M.Cmd := io(j).M.Cmd
       }.otherwise {
         connectors(j).ocp.M.Cmd := Bits(0)
@@ -70,7 +68,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
       scheduler.io.done := Bool(false)
-      syncCounter := UInt(20)
+      syncCounter := UInt(6)
       state := s_sync
     }
   }
@@ -82,7 +80,12 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     state := s_sync
 
+    when(syncCounter === UInt(1)) {
+      scheduler.io.done := Bool(true)
+    }
+
     when(syncCounter === UInt(0)) {
+      scheduler.io.done := Bool(true)
       state := s_idle
     }
   }
@@ -95,10 +98,9 @@ object SSPMAegeanMain {
     println("Generating the SSPMAegean hardware")
 
     val chiselArgs = args.slice(0, args.length)
-    println(chiselArgs(0))
-    val CPUCnt = args(0)
+    val nCores = args(0)
 
-    chiselMain(chiselArgs, () => Module(new SSPMAegean(CPUCnt.toInt)))
+    chiselMain(chiselArgs, () => Module(new SSPMAegean(nCores.toInt)))
   }
 }
 
@@ -121,7 +123,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   // Simulate a write instruction from Patmos
   def wr(addr: BigInt, data: BigInt, byteEn: BigInt, core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.WR.litValue())
-    poke(dut.io(core).M.Addr, 0xF00A0000L + addr)
+    poke(dut.io(core).M.Addr, 0xF00B0000L + addr)
     poke(dut.io(core).M.Data, data)
     poke(dut.io(core).M.ByteEn, byteEn)
   }
@@ -129,7 +131,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   // Simulate a read instruction from Patmos
   def rd(addr: BigInt, byteEn: BigInt, core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.RD.litValue())
-    poke(dut.io(core).M.Addr, 0xF00A0000L + addr)
+    poke(dut.io(core).M.Addr, 0xF00B0000L + addr)
     poke(dut.io(core).M.Data, 0)
     poke(dut.io(core).M.ByteEn, byteEn)
   }
@@ -438,6 +440,15 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   step(1)
 
   expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
+
+  // The next core should now be allowed to read memory
+  while(peek(dut.scheduler.io.out) == 1) {
+    step(1)
+  }
+  
+  step(1)
+  
+  peek(dut.scheduler.io.out)
 
 }
 

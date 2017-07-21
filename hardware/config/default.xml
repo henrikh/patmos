@@ -17,16 +17,16 @@
     <IO DevTypeRef="CpuInfo" offset="0"/>
     <IO DevTypeRef="Timer" offset="2" intrs="0,1"/>
     <IO DevTypeRef="Deadline" offset="3"/>
-    <IO DevTypeRef="SSPM" offset="4"/>
+    <IO DevTypeRef="SSPMDevice" offset="11"/>
   </IOs>
 
   <Devs>
     <Dev DevType="CpuInfo" entity="CpuInfo" iface="OcpCore" />
     <Dev DevType="Timer" entity="Timer" iface="OcpCore" />
     <Dev DevType="Deadline" entity="Deadline" iface="OcpCore"/>
-    <Dev DevType="SSPM" entity="SSPM" iface="OcpCore">
+    <Dev DevType="SSPMDevice" entity="SSPM" iface="OcpCore">
       <params>
-      <param name="nConnectors" value="1"/>
+      <param name="nCores" value="1"/>
       </params>
     </Dev>
   </Devs>

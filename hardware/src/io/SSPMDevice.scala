@@ -3,9 +3,14 @@
  * Author: Henrik Enggaard Hansen (henrik.enggaard@gmail.com)
  * License: Simplified BSD License
  *
- * The core of a shared scratch-pad memory
+ * A OCP allowing for single core testing of the SSPM.
  *
- * Based upon Martin Schoeberl's ALU example
+ * An instance of the SSPM core implemenation is used,
+ * so the device behavior is identical to a multicore
+ * usage.
+ *
+ * This implementation is suitable for emulation using
+ * the C++ emulator.
  *
  */
 
@@ -21,72 +26,27 @@ import ocp._
 import sspm._
 
 object SSPM extends DeviceObject {
-  var nConnectors = 1
+  var nCores = 1
 
   def init(params: Map[String, String]) = {
-    nConnectors = getPosIntParam(params, "nConnectors")
+    nCores = getPosIntParam(params, "nCores")
   }
 
-  def create(params: Map[String, String]): SSPM = Module(new SSPM(nConnectors))
+  def create(params: Map[String, String]): SSPM = Module(new SSPM(nCores))
 
   trait Pins {}
 }
 
 /**
- * The basic SSPM
- */
-class SPMemory extends Module() {
-  val io = new Bundle {
-    val in = UInt(OUTPUT, 32)
-    val out = UInt(INPUT, 32)
-    val writeEnable = Bits(INPUT, 1)
-  }
-
-  io.out := io.in
-}
-
-/**
  * A top level of SSPM
  */
-class SSPM(val nConnectors: Int) extends CoreDevice {
+class SSPM(val nCores: Int) extends CoreDevice {
 
   override val io = new CoreDeviceIO()
 
-  // Generate modules
-  val mem = Module(new memSPM(1024))
-  val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
-  val scheduler = Module(new Scheduler(nConnectors))
-  val decoder = UIntToOH(scheduler.io.out, nConnectors)
-
-  scheduler.io.done := Bool(true)
-
-  // Connect the SSPMConnector with the SSPM
-  for (j <- 0 until nConnectors) {
-    if(j == 0) {
-      connectors(j).ocp <> io.ocp
-    }
-    connectors(j).connectorSignals.S.Data := mem.io.S.Data
-
-    // Enable connectors based upon one-hot coding of scheduler
-    connectors(j).connectorSignals.enable := decoder(j)
-  }
-
-  mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
-  mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
-  mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
-  mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
+  // Connect one OCP interface from SSPM Aegean to the Patmos OCP
+  Module(new SSPMAegean(nCores)).io(0) <> io.ocp
 }
-
-// Generate the Verilog code by invoking chiselMain() in our main()
-object SSPMMain {
-  def main(args: Array[String]): Unit = {
-    println("Generating the SSPM hardware")
-    val chiselArgs = args.slice(0,args.length) // If we later add for number of connectors,
-                                               // we shoud index in another fashion, see SRamCtrl
-    chiselMain(chiselArgs, () => Module(new SSPM(3)))
-  }
-}
-
 
 /**
  * Test the SSPM design
@@ -124,7 +84,7 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
   println("\nTest write\n")
   step(1)
 
-  wr(1, 42, Bits("b1111").litValue())
+  wr(0xF00B0001L, 42, Bits("b1111").litValue())
 
   step(1)
 
@@ -143,7 +103,7 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
   println("\nRead test\n")
   step(1)
 
-  rd(1, Bits("b1111").litValue())
+  rd(0xF00B0001L, Bits("b1111").litValue())
 
   step(1)
 
