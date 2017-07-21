@@ -9,7 +9,7 @@
 Reading from this address assures that the next read + write 
 happen atomically in the SSPM
 */
-#define SCHEDULE_SYNC (0xF00AFFFF)
+#define SCHEDULE_SYNC (0xF00BFFFF)
 
 typedef enum {OPEN, LOCKED} lock_t;
 

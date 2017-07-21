@@ -13,8 +13,8 @@
 
 int main() {
 
-  volatile _SPM int *sspm_ptr = (volatile _SPM int *) 0xF0040000;
-  volatile _SPM int *sspm_sync = (volatile _SPM int *) 0xF004FFFF;
+  volatile _SPM int *sspm_ptr = (volatile _SPM int *) 0xF00B0000;
+  volatile _SPM int *sspm_sync = (volatile _SPM int *) 0xF00BFFFF;
   volatile _SPM int *uart_ptr = (volatile _SPM int *) 0xF0080004;
   int i, j;
   int k = 0;

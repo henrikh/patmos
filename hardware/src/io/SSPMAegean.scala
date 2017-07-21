@@ -40,7 +40,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
       connectors(j).ocp.M <> io(j).M
       connectors(j).ocp.S <> io(j).S
       connectors(j).connectorSignals.S.Data := mem.io.S.Data
-      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(0xF00A, width = 16)) {
+      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(0xF00B, width = 16)) {
         connectors(j).ocp.M.Cmd := io(j).M.Cmd
       }.otherwise {
         connectors(j).ocp.M.Cmd := Bits(0)
