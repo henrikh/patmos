@@ -9,7 +9,7 @@
  *
  */
 
-package io
+package sspm
 
 import Chisel._
 import Node._
@@ -17,8 +17,6 @@ import Node._
 import patmos.Constants._
 
 import ocp._
-
-import sspm._
 
 /**
  * A top level of SSPMAegean
@@ -100,7 +98,6 @@ object SSPMAegeanMain {
     println("Generating the SSPMAegean hardware")
 
     val chiselArgs = args.slice(0, args.length)
-    println(chiselArgs(0))
     val CPUCnt = args(0)
 
     chiselMain(chiselArgs, () => Module(new SSPMAegean(CPUCnt.toInt)))

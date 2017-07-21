@@ -51,7 +51,7 @@ MEMCTRLMAIN16=io.SRamMain
 MEMCTRLMAINOC=io.OCRamMain
 ARBITERMAIN=ocp.ArbiterMain
 TDMARBITERMAIN=ocp.TdmArbiterWrapperMain
-MEMSSPM=io.SSPMAegeanMain
+MEMSSPM=sspm.SSPMAegeanMain
 
 # config file for Patmos -- now just frequency
 #CONFIG=default
@@ -191,10 +191,10 @@ SSPM-test:
 	$(SBT) "run-main io.SSPMTester"
 
 SSPMAegean:
-	$(SBT) "run-main io.SSPMAegeanMain $(CPU_CNT) --targetDir $(HWGENDIR) --cse --backend v"
+	$(SBT) "run-main sspm.SSPMAegeanMain $(CPU_CNT) --targetDir $(HWGENDIR) --cse --backend v"
 
 SSPMAegean-test:
-	$(SBT) "run-main io.SSPMAegeanTester"	
+	$(SBT) "run-main sspm.SSPMAegeanTester"
 
 SSPM-scheduler:
 	$(SBT) "run-main sspm.SchedulerMain"
