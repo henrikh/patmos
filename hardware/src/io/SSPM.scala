@@ -3,9 +3,14 @@
  * Author: Henrik Enggaard Hansen (henrik.enggaard@gmail.com)
  * License: Simplified BSD License
  *
- * The core of a shared scratch-pad memory
+ * A OCP allowing for single core testing of the SSPM.
  *
- * Based upon Martin Schoeberl's ALU example
+ * An instance of the SSPM core implemenation is used,
+ * so the device behavior is identical to a multicore
+ * usage.
+ *
+ * This implementation is suitable for emulation using
+ * the C++ emulator.
  *
  */
 
@@ -52,69 +57,8 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
 
   override val io = new CoreDeviceIO()
 
-  // Generate modules
-  val mem = Module(new memSPM(1024))
-  val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
-  val scheduler = Module(new Scheduler(nConnectors))
-  val decoder = UIntToOH(scheduler.io.out, nConnectors)
-
-  scheduler.io.done := Bool(true)
-
-  // Connect the SSPMConnector with the SSPM
-  for (j <- 0 until nConnectors) {
-    if(j == 0) {
-      connectors(j).ocp <> io.ocp
-      connectors(j).connectorSignals.S.Data := mem.io.S.Data
-      connectors(j).ocp.M.Cmd := io.ocp.M.Cmd
-    }
-    connectors(j).connectorSignals.S.Data := mem.io.S.Data
-
-    // Enable connectors based upon one-hot coding of scheduler
-    connectors(j).connectorSignals.enable := decoder(j)
-  }
-
-  mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
-  mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
-  mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
-  mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
-
-  // Synchronization state machine
-
-  val s_idle :: s_sync :: Nil = Enum(UInt(), 2)
-
-  val state = Reg(init = s_idle)
-  val syncCounter = Reg(init = UInt(0))
-  syncCounter := syncCounter
-
-  scheduler.io.done := Bool(true)
-
-  when(state === s_idle) {
-    state := s_idle
-
-    when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
-      scheduler.io.done := Bool(false)
-      syncCounter := UInt(5)
-      state := s_sync
-    }
-  }
-
-  when(state === s_sync) {
-    scheduler.io.done := Bool(false)
-
-    syncCounter := syncCounter - UInt(1)
-
-    state := s_sync
-
-    when(syncCounter === UInt(1)) {
-      scheduler.io.done := Bool(true)
-    }
-
-    when(syncCounter === UInt(0)) {
-      scheduler.io.done := Bool(true)
-      state := s_idle
-    }
-  }
-
+  // Connect one OCP interface from SSPM Aegean to the Patmos OCP
+  Module(new SSPMAegean(nConnectors)).io(0) <> io.ocp
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
@@ -164,7 +108,7 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
   println("\nTest write\n")
   step(1)
 
-  wr(1, 42, Bits("b1111").litValue())
+  wr(0xF00B0001L, 42, Bits("b1111").litValue())
 
   step(1)
 
@@ -183,7 +127,7 @@ class SSPMTester(dut: SSPM) extends Tester(dut) {
   println("\nRead test\n")
   step(1)
 
-  rd(1, Bits("b1111").litValue())
+  rd(0xF00B0001L, Bits("b1111").litValue())
 
   step(1)
 
