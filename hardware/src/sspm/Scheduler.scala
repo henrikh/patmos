@@ -24,20 +24,19 @@ import io._
 class Scheduler(size: Int) extends Module {
   val io = new Bundle {
     val done = Bool(INPUT)
-    val out = UInt(OUTPUT, size)
+    val out = UInt(OUTPUT)
   }
-  val r1 = Reg(init = UInt(0, log2Up(size))) // Output
+  val out = Reg(init = UInt(0, log2Up(size)))
 
   when (io.done) {
-    r1 := r1 + UInt(1)
+    out := out + UInt(1)
 
-    when ( r1 >= UInt(size - 1) ) {
-      r1 := UInt(0)
+    when ( out >= UInt(size - 1) ) {
+      out := UInt(0)
     }
-  }.otherwise {
-}
+  }
 
-  io.out := r1
+  io.out := out
 }
 // Generate the Verilog code by invoking chiselMain() in our main()
 object SchedulerMain {
