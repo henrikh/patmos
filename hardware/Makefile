@@ -137,7 +137,7 @@ $(HWBUILDDIR)/TdmArbiterWrapper.v: $(SRC)
 	$(SBT) "run-main $(TDMARBITERMAIN) $(ARBITER_CNT) $(ARBITER_ADDR_WIDTH) $(ARBITER_DATA_WIDTH) $(ARBITER_BURST_LENGTH) --targetDir $(HWBUILDDIR) --cse --backend v"
 
 $(HWBUILDDIR)/SSPMAegean.v: $(SRC)
-	$(SBT) "run-main $(MEMSSPM) $(CPU_CNT) --targetDir $(HWBUILDDIR) --cse --backend v"
+	$(SBT) "run-main $(MEMSSPM) $(CORE_CNT) --targetDir $(HWBUILDDIR) --cse --backend v"
 
 # run Verilog simulation
 vsim: verilog
@@ -191,7 +191,7 @@ SSPM-test:
 	$(SBT) "run-main io.SSPMTester"
 
 SSPMAegean:
-	$(SBT) "run-main sspm.SSPMAegeanMain $(CPU_CNT) --targetDir $(HWGENDIR) --cse --backend v"
+	$(SBT) "run-main sspm.SSPMAegeanMain $(CORE_CNT) --targetDir $(HWGENDIR) --cse --backend v"
 
 SSPMAegean-test:
 	$(SBT) "run-main sspm.SSPMAegeanTester"

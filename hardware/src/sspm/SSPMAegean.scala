@@ -21,20 +21,20 @@ import ocp._
 /**
  * A top level of SSPMAegean
  */
-class SSPMAegean(val nConnectors: Int) extends Module {
+class SSPMAegean(val nCores: Int) extends Module {
 
   //override val io = new CoreDeviceIO()
 
-  val io = Vec.fill(nConnectors) { new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH) }
+  val io = Vec.fill(nCores) { new OcpCoreSlavePort(ADDR_WIDTH, DATA_WIDTH) }
 
   // Generate modules
   val mem = Module(new memSPM(1024))
-  val connectors = Vec.fill(nConnectors) { Module(new SSPMConnector()).io }
-  val scheduler = Module(new Scheduler(nConnectors))
-  val decoder = UIntToOH(scheduler.io.out, nConnectors)
+  val connectors = Vec.fill(nCores) { Module(new SSPMConnector()).io }
+  val scheduler = Module(new Scheduler(nCores))
+  val decoder = UIntToOH(scheduler.io.out, nCores)
 
   // Connect the SSPMConnector with the SSPMAegean
-  for (j <- 0 until nConnectors) {
+  for (j <- 0 until nCores) {
       connectors(j).ocp.M <> io(j).M
       connectors(j).ocp.S <> io(j).S
       connectors(j).connectorSignals.S.Data := mem.io.S.Data
@@ -98,9 +98,9 @@ object SSPMAegeanMain {
     println("Generating the SSPMAegean hardware")
 
     val chiselArgs = args.slice(0, args.length)
-    val CPUCnt = args(0)
+    val nCores = args(0)
 
-    chiselMain(chiselArgs, () => Module(new SSPMAegean(CPUCnt.toInt)))
+    chiselMain(chiselArgs, () => Module(new SSPMAegean(nCores.toInt)))
   }
 }
 

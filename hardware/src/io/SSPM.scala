@@ -26,13 +26,13 @@ import ocp._
 import sspm._
 
 object SSPM extends DeviceObject {
-  var nConnectors = 1
+  var nCores = 1
 
   def init(params: Map[String, String]) = {
-    nConnectors = getPosIntParam(params, "nConnectors")
+    nCores = getPosIntParam(params, "nCores")
   }
 
-  def create(params: Map[String, String]): SSPM = Module(new SSPM(nConnectors))
+  def create(params: Map[String, String]): SSPM = Module(new SSPM(nCores))
 
   trait Pins {}
 }
@@ -40,12 +40,12 @@ object SSPM extends DeviceObject {
 /**
  * A top level of SSPM
  */
-class SSPM(val nConnectors: Int) extends CoreDevice {
+class SSPM(val nCores: Int) extends CoreDevice {
 
   override val io = new CoreDeviceIO()
 
   // Connect one OCP interface from SSPM Aegean to the Patmos OCP
-  Module(new SSPMAegean(nConnectors)).io(0) <> io.ocp
+  Module(new SSPMAegean(nCores)).io(0) <> io.ocp
 }
 
 /**
