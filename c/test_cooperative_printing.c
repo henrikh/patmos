@@ -3,60 +3,30 @@
 #include <stdlib.h>
 #include <machine/patmos.h>
 #include "libcorethread/corethread.c"
-#include "libsspm/string_to_master.h"
+#include "libsspm/coprint.h"
 
 void slave(void* arg){
 	int cpuid = get_cpuid();
 	
 	if(cpuid == 1){
-		int i = 0;
-		send_from_core(1, "|core 1:0|\n");
-		while(i<2){
-			if(can_send_from(1)){
-				if(i==0){
-					send_from_core(1, "|core 1:1|\n");
-				}
-				if(i == 1){
-					send_from_core(1, "|core 1:2|\n");
-				}
-				i++;
-			}
-		}
+		coprint_wait_send(1, "|core 1:0|\n");
+		coprint_wait_send(1, "|core 1:1|\n");
+		coprint_wait_send(1, "|core 1:2|\n");
 	}else if(cpuid == 2){
-		int i = 0;
-		send_from_core(2, "|core 2:0|\n");
-		while(i<2){
-			if(can_send_from(2)){
-				if(i==0){
-					send_from_core(2, "|core 2:1|\n");
-				}
-				if(i == 1){
-					send_from_core(2, "|core 2:2|\n");
-				}
-				i++;
-			}
-		}
+		coprint_wait_send(2, "|core 2:0|\n");
+		coprint_wait_send(2, "|core 2:1|\n");
+		coprint_wait_send(2, "|core 2:2|\n");
 	}else if(cpuid == 3){
-		int i = 0;
-		send_from_core(3, "|core 3:0|\n");
-		while(i<2){
-			if(can_send_from(3)){
-				if(i==0){
-					send_from_core(3, "|core 3:1|\n");
-				}
-				if(i == 1){
-					send_from_core(3, "|core 3:2|\n");
-				}
-				i++;
-			}
-		}
+		coprint_wait_send(3, "|core 3:0|\n");
+		coprint_wait_send(3, "|core 3:1|\n");
+		coprint_wait_send(3, "|core 3:2|\n");
 	}	
 }
 
 int main()
 {
 	printf("Initializing string_to_master at %x.\n",LOWEST_SPM_ADDRESS);
-	int end = initialize_messaging(LOWEST_SPM_ADDRESS);
+	int end = coprint_initialize(LOWEST_SPM_ADDRESS);
 	printf("Initializing ended at %x.\n", end);	
 
 
@@ -70,25 +40,22 @@ int main()
 		core3 = 0;
 
 	while((core1<3) && (core2<3) && (core3<3)){
-		if(core1<3 && can_receive_from_core(1)){
-			printf("Core 1:");
-			printf(receive_from_core(1));
+		if(core1<3){
+			printf("Core 1:");			
+			printf(coprint_wait_receive(1));
 			printf("\n");
-			free_received_from_core(1);
 			core1++;
 		}
-		if(core2<3 && can_receive_from_core(2)){
+		if(core2<3){
 			printf("Core 2:");			
-			printf(receive_from_core(2));
+			printf(coprint_wait_receive(2));
 			printf("\n");
-			free_received_from_core(2);
 			core2++;
 		}
-		if(core3<3 && can_receive_from_core(3)){
+		if(core3<3){
 			printf("Core 3:");			
-			printf(receive_from_core(3));
+			printf(coprint_wait_receive(3));
 			printf("\n");
-			free_received_from_core(3);
 			core3++;
 		}
 	}
@@ -99,16 +66,6 @@ int main()
 	}
 
 	printf("All cores done!\n");
-	/*
-	printf("Can receive: %x\n", can_receive_from_core(1));
-	printf("Received: '");
-	printf(receive_from_core(1));
-	printf("'\n");
-	printf("Can receive: %x\n", can_receive_from_core(1));
-	printf("Clear.\n");
-	free_received_from_core(1);
-	printf("Can receive: %x\n", can_receive_from_core(1));
-	*/
 }
 
 
