@@ -132,22 +132,24 @@ void slave_old(void* arg){
 	coprint_slave_print(cpuid, "Done.");
 }
 
-void slave(void* arg){
+int slave(void* arg){
 	int cpuid = get_cpuid();
-	
+	int count = 0;
 	int lock_addr = ((int*) arg)[0];
 	volatile _SPM int *contest_addr = lock_addr + 4;
 	
 	
 	int stop = 0;
-	for(int contest_length = 0; contest_length<200000 && !stop; contest_length++){
+	for(int contest_length = 0; contest_length<20 && !stop; contest_length++){
 		//if(! (contest_length % 1000)){
 		//	coprint_slave_print(cpuid, "Mark");
 		//}
 		int contest;
 		
-		lock(lock_addr);
-		
+
+		count += lock(lock_addr);
+		led_on();
+		//led_on_for(100);
 		contest = *contest_addr;
 		if(contest != 0){
 			char contest_length_string[4] = {0,0,0,0};		
@@ -192,20 +194,23 @@ void slave(void* arg){
 					coprint_slave_print(cpuid, contest_string);
 					stop = 1;
 				}
-				//For testing, insert an error
-				if(contest_length == 2 && cpuid == 2){
+				/*For testing, insert an error
+				if(contest_length == 2 && cpuid == 3){
 					*contest_addr = *contest_addr + 1;
 				}
+				*/
 			}		
 		}
 			
 		release(lock_addr);
+		led_off();
 	}
 	if(stop){
 		coprint_slave_print(cpuid, "Erroneous end.");
 	}else{
 		coprint_slave_print(cpuid, "Successful end.");
 	}
+	return count;
 }
 
 int main()
@@ -222,11 +227,7 @@ int main()
 	for(i = 1; i< NR_CORES; i++){
 		corethread_create(&i, &slave, &coprint_end);
 	}
-	///*
-	int core1 = 0, 
-		core2 = 0,
-		core3 = 0;	
-	
+		
 	while(core_running(1) || core_running(2) || core_running(3)){
 		char buffer[CHANNEL_BUFFER_SIZE];
 		if(coprint_try_receive(1,buffer)){
@@ -266,7 +267,7 @@ int main()
 	//*/
 	int *res;
 	for(i = 1; i < NR_CORES; i++){
-		corethread_join(i, (void **) &res);
+		printf("Core %x count: %x\n", i, (int)corethread_join(i, (void **) &res));
 	}
 
 	printf("All cores done: %x!\n", *contestP);

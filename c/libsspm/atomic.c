@@ -60,8 +60,10 @@ int try_lock( volatile _SPM lock_t *l){
 	return  lock_value == OPEN ;
 }
 
-void lock(volatile _SPM lock_t *l){
-	while( !try_lock(l)){}
+int lock(volatile _SPM lock_t *l){
+	int count = 0;
+	while( !try_lock(l)){count++;}
+	return count;
 }
 
 void release( volatile _SPM lock_t *l ){
