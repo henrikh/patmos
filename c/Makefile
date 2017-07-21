@@ -165,8 +165,8 @@ $(LIBAUDIO): $(BUILDDIR)/libaudio/dsp_algorithms.o $(BUILDDIR)/libaudio/audio.o
 libsspm: $(LIBSSPM)
 $(BUILDDIR)/libsspm/atomic.o: libsspm/atomic.h
 $(BUILDDIR)/libsspm/smp.o: libsspm/atomic.h libsspm/smp.h
-$(BUILDDIR)/libsspm/string_to_master.o: libsspm/string_to_master.c libsspm/string_to_master.c
-$(LIBSSPM): $(BUILDDIR)/libsspm/atomic.o $(BUILDDIR)/libsspm/smp.o $(BUILDDIR)/libsspm/string_to_master.o
+$(BUILDDIR)/libsspm/coprint.o: libsspm/coprint.h
+$(LIBSSPM): $(BUILDDIR)/libsspm/atomic.o $(BUILDDIR)/libsspm/smp.o $(BUILDDIR)/libsspm/coprint.o
 	patmos-ar r $@ $^
 
 
