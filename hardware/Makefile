@@ -187,9 +187,6 @@ modcomp:
 
 # SSPM make targets
 
-SSPM:
-	$(SBT) "run-main io.SSPMMain --targetDir $(HWGENDIR) --cse --backend v"
-
 SSPM-test:
 	$(SBT) "run-main io.SSPMTester"
 

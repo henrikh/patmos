@@ -38,19 +38,6 @@ object SSPM extends DeviceObject {
 }
 
 /**
- * The basic SSPM
- */
-class SPMemory extends Module() {
-  val io = new Bundle {
-    val in = UInt(OUTPUT, 32)
-    val out = UInt(INPUT, 32)
-    val writeEnable = Bits(INPUT, 1)
-  }
-
-  io.out := io.in
-}
-
-/**
  * A top level of SSPM
  */
 class SSPM(val nConnectors: Int) extends CoreDevice {
@@ -60,17 +47,6 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
   // Connect one OCP interface from SSPM Aegean to the Patmos OCP
   Module(new SSPMAegean(nConnectors)).io(0) <> io.ocp
 }
-
-// Generate the Verilog code by invoking chiselMain() in our main()
-object SSPMMain {
-  def main(args: Array[String]): Unit = {
-    println("Generating the SSPM hardware")
-    val chiselArgs = args.slice(0,args.length) // If we later add for number of connectors,
-                                               // we shoud index in another fashion, see SRamCtrl
-    chiselMain(chiselArgs, () => Module(new SSPM(3)))
-  }
-}
-
 
 /**
  * Test the SSPM design
