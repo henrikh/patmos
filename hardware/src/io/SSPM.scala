@@ -64,6 +64,8 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
   for (j <- 0 until nConnectors) {
     if(j == 0) {
       connectors(j).ocp <> io.ocp
+      connectors(j).connectorSignals.S.Data := mem.io.S.Data
+      connectors(j).ocp.M.Cmd := io.ocp.M.Cmd
     }
     connectors(j).connectorSignals.S.Data := mem.io.S.Data
 
@@ -75,6 +77,44 @@ class SSPM(val nConnectors: Int) extends CoreDevice {
   mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
   mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
   mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
+
+  // Synchronization state machine
+
+  val s_idle :: s_sync :: Nil = Enum(UInt(), 2)
+
+  val state = Reg(init = s_idle)
+  val syncCounter = Reg(init = UInt(0))
+  syncCounter := syncCounter
+
+  scheduler.io.done := Bool(true)
+
+  when(state === s_idle) {
+    state := s_idle
+
+    when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
+      scheduler.io.done := Bool(false)
+      syncCounter := UInt(5)
+      state := s_sync
+    }
+  }
+
+  when(state === s_sync) {
+    scheduler.io.done := Bool(false)
+
+    syncCounter := syncCounter - UInt(1)
+
+    state := s_sync
+
+    when(syncCounter === UInt(1)) {
+      scheduler.io.done := Bool(true)
+    }
+
+    when(syncCounter === UInt(0)) {
+      scheduler.io.done := Bool(true)
+      state := s_idle
+    }
+  }
+
 }
 
 // Generate the Verilog code by invoking chiselMain() in our main()
