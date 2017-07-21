@@ -21,7 +21,7 @@ int coprint_initialize(int initAt){
 
 int coprint_can_receive(int coreNr){
 	volatile _SPM int *flagP = coprint_flag_address(coreNr);
-	return  *flagP;
+	return  *flagP == 1;
 }
 
 
@@ -30,7 +30,7 @@ char* coprint_receive(int coreNr){
 	char *localBufferP = coprint_local_buffer(coreNr);
 	
 	int i = 0;
-	while( *sspmBufferP != 0 && i<(CHANNEL_BUFFER_SIZE-1)){
+	while( (*sspmBufferP != 0) && (i<(CHANNEL_BUFFER_SIZE-1))){
 		char c = (char) *sspmBufferP;
 		localBufferP[i] = c;
 		sspmBufferP = sspmBufferP + 4;
@@ -38,6 +38,24 @@ char* coprint_receive(int coreNr){
 	}
 	localBufferP[i] = 0;
 	return localBufferP;
+}
+
+int coprint_try_receive(int coreNr, char* into){
+	if(coprint_can_receive(coreNr)){
+		volatile _SPM int *sspmBufferP = coprint_buffer_start(coreNr);
+		int i = 0;
+		while( *sspmBufferP != 0 && i<(CHANNEL_BUFFER_SIZE-1)){
+			char c = (char) *sspmBufferP;
+			into[i] = c;
+			sspmBufferP = sspmBufferP + 4;
+			i++;
+		}
+		into[i] = 0;
+		coprint_free_received(coreNr);
+		return 1;
+	}else{
+		return 0;
+	}
 }
 
 char* coprint_wait_receive(int coreNr){
@@ -75,7 +93,7 @@ void coprint_send(int coreNr, char *text){
 	*flagP = 1;
 }
 
-void coprint_wait_send(int coreNr, char *text){
+void coprint_slave_print(int coreNr, char *text){
 	while(!coprint_can_send(coreNr)){}
 	coprint_send(coreNr, text);
 }
@@ -90,7 +108,7 @@ int coprint_buffer_start(int coreNr){
 }
 
 char* coprint_local_buffer(int coreNr){
-	return (char *) (char_buffers+(CHANNEL_BUFFER_SIZE*NR_CORES));
+	return (char *) (char_buffers+(CHANNEL_BUFFER_SIZE*coreNr));
 }
 
 

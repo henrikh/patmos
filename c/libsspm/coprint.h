@@ -5,7 +5,8 @@
 #include <machine/spm.h>
 #include "sspm_properties.h"
 
-#define CHANNEL_BUFFER_SIZE (25)
+//Must be an even number, dont know why
+#define CHANNEL_BUFFER_SIZE (30)
 
 
 /*
@@ -34,6 +35,14 @@ Busy waits until there is something in the channel.
 char* coprint_wait_receive(int coreNr);
 
 /*
+Tries to receive content from channel if there is any.
+Received content is put into the given char pointer (which is assumed to be as long as CHANNEL_BUFFER_SIZE).
+
+Returns whether any content was received.
+*/
+int coprint_try_receive(int coreNr, char* into);
+
+/*
 Allows the communication channel to discard anything recieved from the core,
 readying the channel for the next transmision.
 */
@@ -53,7 +62,7 @@ void coprint_send(int coreNr, char *text);
 Send the given text when the channel is ready.
 Busy waits until the channel is ready.
 */
-void coprint_wait_send(int coreNr, char *text);
+void coprint_slave_print(int coreNr, char *text);
 
 /*
 Get the address of the core's channel flag
