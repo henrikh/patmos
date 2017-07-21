@@ -70,7 +70,7 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
       scheduler.io.done := Bool(false)
-      syncCounter := UInt(20)
+      syncCounter := UInt(6)
       state := s_sync
     }
   }
@@ -82,7 +82,12 @@ class SSPMAegean(val nConnectors: Int) extends Module {
 
     state := s_sync
 
+    when(syncCounter === UInt(1)) {
+      scheduler.io.done := Bool(true)
+    }
+
     when(syncCounter === UInt(0)) {
+      scheduler.io.done := Bool(true)
       state := s_idle
     }
   }
@@ -438,6 +443,15 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   step(1)
 
   expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
+
+  // The next core should now be allowed to read memory
+  while(peek(dut.scheduler.io.out) == 1) {
+    step(1)
+  }
+  
+  step(1)
+  
+  peek(dut.scheduler.io.out)
 
 }
 
