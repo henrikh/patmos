@@ -123,7 +123,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   // Simulate a write instruction from Patmos
   def wr(addr: BigInt, data: BigInt, byteEn: BigInt, core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.WR.litValue())
-    poke(dut.io(core).M.Addr, 0xF00A0000L + addr)
+    poke(dut.io(core).M.Addr, 0xF00B0000L + addr)
     poke(dut.io(core).M.Data, data)
     poke(dut.io(core).M.ByteEn, byteEn)
   }
@@ -131,7 +131,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   // Simulate a read instruction from Patmos
   def rd(addr: BigInt, byteEn: BigInt, core: Int) = {
     poke(dut.io(core).M.Cmd, OcpCmd.RD.litValue())
-    poke(dut.io(core).M.Addr, 0xF00A0000L + addr)
+    poke(dut.io(core).M.Addr, 0xF00B0000L + addr)
     poke(dut.io(core).M.Data, 0)
     poke(dut.io(core).M.ByteEn, byteEn)
   }
