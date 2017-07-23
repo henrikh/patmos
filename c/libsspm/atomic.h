@@ -24,7 +24,7 @@ int try_lock( volatile _SPM lock_t *l);
 Keeps trying to lock the given lock until successfull.
 This call busy waits (blocks).
 */
-int lock( volatile _SPM lock_t *l);
+void lock( volatile _SPM lock_t *l);
 
 /*
 Releases the given lock in the shared SPM.

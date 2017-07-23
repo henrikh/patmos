@@ -6,211 +6,108 @@
 #include "libcorethread/corethread.c"
 #include "libsspm/coprint.h"
 #include "libsspm/atomic.h"
+#include "libsspm/led.h"
 
-#define LED ( *( ( volatile _IODEV unsigned * ) 0xF0090000))
-void led_on(){
-	LED = 1;
-}
-
-void led_off(){
-	LED = 0;
-}
-#define MS_CLOCK (18000)
-void led_on_for(int ms){
-	int i,j;
-	for(i = 0; i < ms; i++){
-		for(j = 0; j < MS_CLOCK; j++){
-			led_on();
-		}
-	}
-}
-
-void led_off_for(int ms){
-	int i,j;
-	for(i = 0; i < ms; i++){
-		for(j = 0; j < MS_CLOCK; j++){
-			led_off();
-		}
-	}
-}
 
 int core_running(int coreNr){
 	return boot_info->slave[coreNr].status != STATUS_RETURN;
 }
 
-void slave_old(void* arg){
-	led_off();
+void slave(void* arg){
 	int cpuid = get_cpuid();
-	
 	int lock_addr = ((int*) arg)[0];
 	volatile _SPM int *contest_addr = lock_addr + 4;
 	
-	//char hex[8];
-	//sprintf(hex, "%x", coprint_flag_address(cpuid));
-	//sprintf(hex, "%x", lock_addr);
+	char hex[11] = {0,0,0,0,0,0,0,0,0,0,0};
 	
-	//coprint_slave_print(cpuid, "lock address: ");
-	//coprint_slave_print(cpuid, hex);
+	coprint_slave_print(cpuid, "Lock address,value: ");
+	sprintf(hex, "%x", lock_addr);
+	coprint_slave_print(cpuid, hex);
 
-	//sprintf(hex, "%x", coprint_local_buffer(cpuid));
-	//sprintf(hex, "%x", contest_addr);
-	//coprint_slave_print(cpuid, "Contest address: ");
-	//coprint_slave_print(cpuid, hex);
+	sprintf(hex, "%x", *((volatile _SPM int *)lock_addr));
+	coprint_slave_print(cpuid, hex);
+
 	
-	for(int contest_length = 0; contest_length<6000; contest_length++){
+	coprint_slave_print(cpuid, "Contest address,value: ");
+	sprintf(hex, "%x", contest_addr);
+	coprint_slave_print(cpuid, hex);
 
-		//Take contest
-		int contest;
-		while(1){
-			lock(lock_addr);
-			//led_on();
-			//coprint_slave_print(cpuid,"lock");
-			//led_on_for(2000);
-			contest = *contest_addr;
-	
-	
+	sprintf(hex, "%x", *contest_addr);
+	coprint_slave_print(cpuid, hex);	
 
-			if(contest != 0){
-				//char contest_string[4] = {0,0,0,0};		
-				//sprintf(contest_string, "%x", contest);
-
-				//coprint_slave_print(cpuid, "Contest taken:");
-				//coprint_slave_print(cpuid, contest_string);
-
-				release(lock_addr);
-				//led_off();
-				//coprint_slave_print(cpuid,"release");
-			}else{
-				*contest_addr = cpuid;
-				//char contest_string[4] = {0,0,0,0};		
-				//sprintf(contest_string, "%x", *contest_addr);
-			
-				//coprint_slave_print(cpuid, "Taking contest:");
-				//coprint_slave_print(cpuid, contest_string);
-
-				release(lock_addr);
-				//led_off();
-				//coprint_slave_print(cpuid,"release");			
-
-				break;
-			}
-		
-		}
-	
-	
-		lock(lock_addr);
-		//led_on();
-		//coprint_slave_print(cpuid,"lock");
-		//led_on_for(2000);
-		
-		//Release contest
-		contest = *contest_addr;
-		if(contest != cpuid){
-			char contest_length_string[4] = {0,0,0,0};		
-			sprintf(contest_length_string, "%x", contest_length);
-
-			char contest_string[4] = {0,0,0,0};		
-			sprintf(contest_string, "%x", contest);
-			
-			coprint_slave_print(cpuid, "Contest cheat at:");
-			coprint_slave_print(cpuid, contest_length_string);
-			coprint_slave_print(cpuid, "Contest cheat with:");
-			coprint_slave_print(cpuid, contest_string);
-		}else{
-			*contest_addr = 0;
-			//char contest_string[4] = {0,0,0,0};		
-			//sprintf(contest_string, "%x", *contest_addr);
-			
-			//coprint_slave_print(cpuid, "Release contest:");
-			//coprint_slave_print(cpuid, contest_string);
-		}
-
-		release(lock_addr);
-		//led_off();
-		//coprint_slave_print(cpuid,"release");	
-	}
-	coprint_slave_print(cpuid, "Done.");
-}
-
-int slave(void* arg){
-	int cpuid = get_cpuid();
-	int count = 0;
-	int lock_addr = ((int*) arg)[0];
-	volatile _SPM int *contest_addr = lock_addr + 4;
-	
-	
 	int stop = 0;
-	for(int contest_length = 0; contest_length<20 && !stop; contest_length++){
-		//if(! (contest_length % 1000)){
-		//	coprint_slave_print(cpuid, "Mark");
-		//}
+	for(int contest_length = 0; contest_length<2100 && !stop; contest_length++){
 		int contest;
-		
-
-		count += lock(lock_addr);
+		lock(lock_addr);	
 		led_on();
-		//led_on_for(100);
+		//Get the value of the contest
 		contest = *contest_addr;
 		if(contest != 0){
-			char contest_length_string[4] = {0,0,0,0};		
+			led_on_for(2000);
+
+			// The contest is not 0, which means another core is using it too.
+			char contest_length_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 			sprintf(contest_length_string, "%x", contest_length);
 
-			char contest_string[4] = {0,0,0,0};		
+			char contest_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 			sprintf(contest_string, "%x", contest);
 			
-			coprint_slave_print(cpuid, "Contest cheat1 at:");
+			coprint_slave_print(cpuid, "Cheat1 at round:");
 			coprint_slave_print(cpuid, contest_length_string);
-			coprint_slave_print(cpuid, "Contest cheat1 with:");
+			coprint_slave_print(cpuid, "Cheat1 contest value:");
 			coprint_slave_print(cpuid, contest_string);
-			stop = 1;
+			stop = 1;			
 		}else{
+			// Increment the contest
 			*contest_addr = *contest_addr + 1;
+
+			// Reload the value of the contest
 			contest = *contest_addr;
 			if(contest != 1){
-				char contest_length_string[4] = {0,0,0,0};		
+				led_on_for(2000);
+				
+				// The contest is being used by another core too
+				char contest_length_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 				sprintf(contest_length_string, "%x", contest_length);
 
-				char contest_string[4] = {0,0,0,0};		
+				char contest_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 				sprintf(contest_string, "%x", contest);
 			
-				coprint_slave_print(cpuid, "Contest cheat2 at:");
+				coprint_slave_print(cpuid, "Cheat2 at round:");
 				coprint_slave_print(cpuid, contest_length_string);
-				coprint_slave_print(cpuid, "Contest cheat2 with:");
+				coprint_slave_print(cpuid, "Cheat2 contest value:");
 				coprint_slave_print(cpuid, contest_string);
 				stop = 1;
 			}else{
 				*contest_addr = *contest_addr - 1;
 				contest = *contest_addr;
 				if(contest != 0){
-					char contest_length_string[4] = {0,0,0,0};		
+					led_on_for(2000);
+
+					char contest_length_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 					sprintf(contest_length_string, "%x", contest_length);
 
-					char contest_string[4] = {0,0,0,0};		
+					char contest_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 					sprintf(contest_string, "%x", contest);
 			
-					coprint_slave_print(cpuid, "Contest cheat3 at:");
+					coprint_slave_print(cpuid, "Cheat3 at round:");
 					coprint_slave_print(cpuid, contest_length_string);
-					coprint_slave_print(cpuid, "Contest cheat3 with:");
+					coprint_slave_print(cpuid, "Cheat3 contest value:");
 					coprint_slave_print(cpuid, contest_string);
 					stop = 1;
 				}
-				/*For testing, insert an error
-				if(contest_length == 2 && cpuid == 3){
-					*contest_addr = *contest_addr + 1;
-				}
-				*/
 			}		
 		}
 			
 		release(lock_addr);
 		led_off();
 	}
+	
 	if(stop){
 		coprint_slave_print(cpuid, "Erroneous end.");
 	}else{
 		coprint_slave_print(cpuid, "Successful end.");
 	}
-	return count;
 }
 
 int main()
@@ -222,6 +119,9 @@ int main()
 	release(coprint_end); //reset lock
 	volatile _SPM int *contestP = (coprint_end+4);
 	*contestP = 0;//reset the contest
+	
+	printf("Initial lock: %x\n", *((volatile _SPM int *) coprint_end));
+	printf("Initial contest: %x\n", *contestP);
 
 	int i;	
 	for(i = 1; i< NR_CORES; i++){
@@ -267,7 +167,7 @@ int main()
 	//*/
 	int *res;
 	for(i = 1; i < NR_CORES; i++){
-		printf("Core %x count: %x\n", i, (int)corethread_join(i, (void **) &res));
+		corethread_join(i, (void **) &res);
 	}
 
 	printf("All cores done: %x!\n", *contestP);

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "atomic.h"
-
+#include "led.h"
 
 
 int try_lock( volatile _SPM lock_t *l){
@@ -31,7 +31,7 @@ int try_lock( volatile _SPM lock_t *l){
 					: "$s0"
 		);
 	}
-
+	
 	asm volatile(	"lwl %0 = [%1 + 0];" 	// Sync to TDMA
 					"lwl %0 = [%2 + 0];"	// Load lock value
 					"swl [%2 + 0] = %3;"	// write lock = LOCKED
@@ -39,7 +39,7 @@ int try_lock( volatile _SPM lock_t *l){
                  	: "r" (syncAddr), "r" (l), "r" (LOCKED)
                  	: 
 	);
-	
+
 	//If interrupts were enabled before then enable them
 	if(intWasOn){
 		s0--;
@@ -51,19 +51,11 @@ int try_lock( volatile _SPM lock_t *l){
 		);
 	}
 
-	//Return to the caller whether he now has the lock
-	if(lock_value == OPEN){
-		printf("MAIN:got lock\n");
-	}else{
-		printf("MAIN:no lock\n");
-	}
 	return  lock_value == OPEN ;
 }
 
-int lock(volatile _SPM lock_t *l){
-	int count = 0;
-	while( !try_lock(l)){count++;}
-	return count;
+void lock(volatile _SPM lock_t *l){
+	while( !try_lock(l)){}
 }
 
 void release( volatile _SPM lock_t *l ){
