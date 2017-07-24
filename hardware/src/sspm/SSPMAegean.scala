@@ -246,6 +246,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   idle(0)
 
   // Stall until data valid
+  println("\nStall until data valid\n")
+
   while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }
@@ -366,6 +368,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   step(1)
 
   // Request synchronization aligned exactly with the scheduler
+  println("\nRequest synchronization aligned exactly with the scheduler\n")
+
   while(peek(dut.scheduler.io.out) != 0) {
     step(1)
   }
@@ -501,9 +505,9 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   while(peek(dut.scheduler.io.out) == 1) {
     step(1)
   }
-  
+
   step(1)
-  
+
   peek(dut.scheduler.io.out)
 
 }
