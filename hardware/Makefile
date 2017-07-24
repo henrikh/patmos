@@ -14,6 +14,8 @@ BOOTDAT?=$(BOOTBUILDDIR)/$(BOOTAPP).dat
 BOARD?=altde2-115
 BOOTSPM_BASE?=0x00020000
 
+CORE_CNT?=4
+
 HWMODULEPREFIX?=
 
 # Building Patmos with Chisel without too much sbt/scala/... stuff
