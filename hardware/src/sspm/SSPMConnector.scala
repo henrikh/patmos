@@ -60,6 +60,10 @@ class SSPMConnector extends CoreDevice() {
   val MDataReg = Reg(init=io.ocp.M.Data)
   val MByteEnReg = Reg(init=io.ocp.M.ByteEn)
   val SDataReg = Reg(init=io.connectorSignals.S.Data)
+  val prevConnectorEnable1 = Reg(init=io.connectorSignals.enable,
+    next=io.connectorSignals.enable)
+  val prevConnectorEnable = Reg(init=prevConnectorEnable1,
+    next=prevConnectorEnable1)
 
   respReg := OcpResp.NULL
   writeEnableReg := io.ocp.M.Cmd(0)
@@ -88,24 +92,36 @@ class SSPMConnector extends CoreDevice() {
   }.otherwise {
     syncReqReg := syncReqReg
   }
-  
+
   when(state === s_idle) {
     when(io.ocp.M.Cmd === OcpCmd.RD || io.ocp.M.Cmd === OcpCmd.WR) {
       state := s_waiting
     }
   }
-  
+
   when(state === s_waiting) {
 
-    when(io.connectorSignals.enable === Bits(1)) {
+    when(io.connectorSignals.enable === Bits(1)
+     && syncReqReg === Bits(0)) {
+
       respReg := OcpResp.DVA
-      syncReqReg := Bits(0)
       state := s_idle
+
+    }.elsewhen(io.connectorSignals.enable === Bits(1)
+    && prevConnectorEnable === Bits(0)
+    && syncReqReg === Bits(1)) {
+
+      syncReqReg := Bits(0)
+      respReg := OcpResp.DVA
+      state := s_idle
+
     }.otherwise {
+
       writeEnableReg := writeEnableReg
       MAddrReg := MAddrReg
       MDataReg := MDataReg
       MByteEnReg := MByteEnReg
+
     }
   }
 
@@ -230,13 +246,75 @@ class SSPMConnectorTester(dut: SSPMConnector) extends Tester(dut) {
   poke(dut.io.connectorSignals.enable, 1)
   poke(dut.io.connectorSignals.S.Data, 42)
 
-  expectRd(1, 0, Bits("b1111").litValue(), 0)
-
   step(1)
 
   poke(dut.io.connectorSignals.enable, 0)
 
   expectRd(0, 42, 0, 1)
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 0)
+  poke(dut.io.connectorSignals.S.Data, 0)
+
+  step(1)
+
+  // Sync request
+
+  println("\nSync request\n")
+
+  rd(0x0000FFFFL, Bits("b1111").litValue())
+
+  step(1)
+
+  idle()
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(2)
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+  expect(dut.io.ocp.S.Resp, 1)
+
+  step(1)
+  expect(dut.io.connectorSignals.syncReq, 0)
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 0)
+
+  step(1)
+
+  // Sync request during enable
+
+  println("\nSync request during enable\n")
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+  rd(0x0000FFFFL, Bits("b1111").litValue())
+
+  step(1)
+
+  idle()
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 0)
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  expect(dut.io.connectorSignals.syncReq, 1)
+
+  step(1)
+
+  poke(dut.io.connectorSignals.enable, 1)
+
+  step(1)
+  expect(dut.io.connectorSignals.syncReq, 0)
 
 }
 

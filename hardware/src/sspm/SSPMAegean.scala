@@ -378,21 +378,81 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   idle(0)
 
-  step(1)
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
 
-  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
   rd(4, Bits("b1111").litValue(), 0)
 
-  // Request synchronization during another reserved period
-  sync(1)
-
   step(1)
-
   idle(0)
 
   step(1)
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
+  step(1)
+
+  // Prevent double synchronization
+  println("\nPrevent double synchronization\n")
+
+  while(peek(dut.scheduler.io.out) == 0) {
+    step(1)
+  }
+  step(1)
+
+  sync(0)
+
+  step(1)
+  idle(0)
+
+  while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
+    step(1)
+  }
+
+  sync(0)
+
+  step(1)
+  idle(0)
+
+  while(peek(dut.scheduler.io.out) == 0) {
+    step(1)
+    expect(dut.io(0).S.Resp, OcpResp.NULL.litValue())
+  }
+
+  while(peek(dut.scheduler.io.out) != 0) {
+    step(1)
+    expect(dut.io(0).S.Resp, OcpResp.NULL.litValue())
+  }
+
+  step(1)
 
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
+  // Request synchronization during another reserved period
+  println("\nRequest synchronization during another reserved period\n")
+
+  while(peek(dut.scheduler.io.out) == 0) {
+    step(1)
+  }
+  sync(0)
+
+  step(1)
+  idle(0)
+
+  while(peek(dut.scheduler.io.out) != 0) {
+    step(1)
+  }
+
+  sync(0)
+
+  step(1)
+  idle(0)
+
+  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
+
+  step(1)
+  expect(dut.connectors(0).connectorSignals.syncReq, 0)
+
   wr(4, 1, Bits("b1111").litValue(), 0)
   idle(1)
 
