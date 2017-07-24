@@ -166,7 +166,8 @@ libsspm: $(LIBSSPM)
 $(BUILDDIR)/libsspm/atomic.o: libsspm/atomic.h
 $(BUILDDIR)/libsspm/smp.o: libsspm/atomic.h libsspm/smp.h
 $(BUILDDIR)/libsspm/coprint.o: libsspm/coprint.h
-$(LIBSSPM): $(BUILDDIR)/libsspm/atomic.o $(BUILDDIR)/libsspm/smp.o $(BUILDDIR)/libsspm/coprint.o
+$(BUILDDIR)/libsspm/led.o: libsspm/led.h
+$(LIBSSPM): $(BUILDDIR)/libsspm/atomic.o $(BUILDDIR)/libsspm/smp.o $(BUILDDIR)/libsspm/coprint.o $(BUILDDIR)/libsspm/led.o 
 	patmos-ar r $@ $^
 
 

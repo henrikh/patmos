@@ -5,8 +5,8 @@
 #include <machine/patmos.h>
 #include "libcorethread/corethread.c"
 #include "libsspm/smp.h"
-
-#define LED ( *( ( volatile _IODEV unsigned * ) 0xF0090000))
+#include "libsspm/led.h"
+#include "libsspm/sspm_properties.h"
 
 void f1(){
 	printf("Starting program.\n");
@@ -38,11 +38,11 @@ void f1(){
 
 void verifyMemoryMapping(){
 	
-	printf("Start verifying memory mapping.\n");
-	volatile _SPM int *p =  0xF00A0000;
-	volatile _SPM int *p2 = 0xF00A0010;
-	volatile _SPM int *p3 = 0xF00A0100;
-	volatile _SPM int *p4 = 0xF00A0030;
+	printf("Start verifying memory mapping 1.\n");
+	volatile _SPM int *p =  LOWEST_SPM_ADDRESS;
+	volatile _SPM int *p2 = LOWEST_SPM_ADDRESS + 0x4;
+	volatile _SPM int *p3 = LOWEST_SPM_ADDRESS + 0x10;
+	volatile _SPM int *p4 = LOWEST_SPM_ADDRESS + 0x14;
 	
 	printf("%x:%x.\n", (int) p, *p);
 	printf("%x:%x.\n", (int) p2, *p2);
@@ -63,50 +63,16 @@ void verifyMemoryMapping(){
 	printf("%x:%x.\n", (int) p3, *p3);
 	printf("%x:%x.\n", (int) p4, *p4);
 	
-	printf("Assign %x = 0xFFFF\n", (int)p);
-	*p = 0xFFFF;	
+	int assign = 0xFFFF;
+	printf("Assign %x = %x\n", (int)p, assign);
+	*p = assign;	
 
 	printf("%x:%x.\n", (int) p, *p);
 	printf("%x:%x.\n", (int) p2, *p2);
 	printf("%x:%x.\n", (int) p3, *p3);
 	printf("%x:%x.\n", (int) p4, *p4);
 
-	printf("End of verifying\n");
-}
-
-void led_on(){
-	LED = 1;
-}
-
-void led_off(){
-	LED = 0;
-}
-
-void blink(int period){
-	for(;;){
-		for(int i = 400000+14117*period; i!= 0; --i) {led_on();}
-		for(int i = 400000+14117*period; i!= 0; --i) {led_off();}
-	}
-}
-
-#define MS_CLOCK (18000)
-
-void led_on_for(int ms){
-	int i,j;
-	for(i = 0; i < ms; i++){
-		for(j = 0; j < MS_CLOCK; j++){
-			led_on();
-		}
-	}
-}
-
-void led_off_for(int ms){
-	int i,j;
-	for(i = 0; i < ms; i++){
-		for(j = 0; j < MS_CLOCK; j++){
-			led_off();
-		}
-	}
+	printf("End verifying memory mapping 1.\n");
 }
 
 void slave(void* args){
@@ -114,15 +80,15 @@ void slave(void* args){
 	
 	led_on_for(1000);
 
-	volatile _SPM int *p = 0xF00A0000 + get_cpuid();
-	volatile _SPM int *p2 = 0xF00A0004 + get_cpuid();
+	volatile _SPM int *p = LOWEST_SPM_ADDRESS + get_cpuid();
+	volatile _SPM int *p2 = LOWEST_SPM_ADDRESS + 4 + get_cpuid();
 	
 	*p = 0;
 	*p2 = 0;
 
 	*p = 1;
 
-	if(*p2 == 1){
+	if(*p2 == 1 || *p != 1){
 		//There is an error
 		led_off_for(1000);
 		led_on_for(1000);
@@ -188,7 +154,7 @@ void slaveCompleteMemoryMapVerification(void* args){
 	}
 	
 	if(fail){
-		blink(100);
+		led_blink(100);
 	}
 
 	led_off();
@@ -216,8 +182,8 @@ void completeMemoryMapVerification(){
 int main(){
 	//f1();
 	//verifyMemoryMapping();
-	verifyMemoryMappingForSlaves();
-	//completeMemoryMapVerification();
+	//verifyMemoryMappingForSlaves();
+	completeMemoryMapVerification();
 }
 //
 

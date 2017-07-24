@@ -30,30 +30,39 @@ class SSPMAegean(val nCores: Int) extends Module {
   // Generate modules
   val mem = Module(new memSPM(1024))
   val connectors = Vec.fill(nCores) { Module(new SSPMConnector()).io }
-  val scheduler = Module(new Scheduler(nCores))
-  val decoder = UIntToOH(scheduler.io.out, nCores)
+  val waitingSignals = Vec.fill(nCores) { Bool() }
+
+  // Look ahead arbiter
+
+  def lookahead(n:Int, waiting:Seq[Bool]):UInt = {
+    val indices = (0 until waiting.length).map((x:Int) => UInt(x))
+    PriorityMux(
+      waiting.drop(n+1) ++ waiting.take(n+1),
+      indices.drop(n+1) ++ indices.take(n+1))
+  }
+
+  val lookaheads = Vec((0 until nCores).map((x:Int) => lookahead(x, waitingSignals)))
+
+  val nextCore = Reg(init = UInt(1, log2Up(nCores)))
+  val currentCore = Reg(init = UInt(0, log2Up(nCores)))
+  val decoder = UIntToOH(currentCore, nCores)
+
+  mem.io.M.Data := connectors(currentCore).connectorSignals.M.Data
+  mem.io.M.Addr := connectors(currentCore).connectorSignals.M.Addr
+  mem.io.M.ByteEn := connectors(currentCore).connectorSignals.M.ByteEn
+  mem.io.M.We := connectors(currentCore).connectorSignals.M.We
 
   // Connect the SSPMConnector with the SSPMAegean
   for (j <- 0 until nCores) {
       connectors(j).ocp.M <> io(j).M
       connectors(j).ocp.S <> io(j).S
       connectors(j).connectorSignals.S.Data := mem.io.S.Data
-      when(io(j).M.Addr(ADDR_WIDTH-1, ADDR_WIDTH-16) === Bits(0xF00B, width = 16)) {
-        connectors(j).ocp.M.Cmd := io(j).M.Cmd
-      }.otherwise {
-        connectors(j).ocp.M.Cmd := Bits(0)
-      }
-
-    scheduler.io.lookahead(j) := connectors(j).connectorSignals.waiting
+      connectors(j).ocp.M.Cmd := io(j).M.Cmd
+    waitingSignals(j) := connectors(j).connectorSignals.waiting
 
     // Enable connectors based upon one-hot coding of scheduler
-    connectors(j).connectorSignals.enable := decoder(j)
+    connectors(j).connectorSignals.enable := Bits(0)
   }
-
-  mem.io.M.Data := connectors(scheduler.io.out).connectorSignals.M.Data
-  mem.io.M.Addr := connectors(scheduler.io.out).connectorSignals.M.Addr
-  mem.io.M.ByteEn := connectors(scheduler.io.out).connectorSignals.M.ByteEn
-  mem.io.M.We := connectors(scheduler.io.out).connectorSignals.M.We
 
   // Synchronization state machine
 
@@ -63,32 +72,39 @@ class SSPMAegean(val nCores: Int) extends Module {
   val syncCounter = Reg(init = UInt(0))
   syncCounter := syncCounter
 
-  scheduler.io.done := Bool(true)
-
   when(state === s_idle) {
     state := s_idle
+    nextCore := lookaheads(currentCore)
+    connectors(currentCore).connectorSignals.enable := Bits(1)
+    currentCore := nextCore
 
-    when(connectors(scheduler.io.out).connectorSignals.syncReq === Bits(1)) {
-      scheduler.io.done := Bool(false)
-      syncCounter := UInt(6)
+    when(connectors(currentCore).connectorSignals.syncReq === Bits(1)) {
+      syncCounter := UInt(7)
+      currentCore := currentCore
       state := s_sync
     }
+
   }
 
   when(state === s_sync) {
-    scheduler.io.done := Bool(false)
 
     syncCounter := syncCounter - UInt(1)
 
+    connectors(currentCore).connectorSignals.enable := Bits(1)
+
     state := s_sync
 
-    when(syncCounter === UInt(1)) {
-      scheduler.io.done := Bool(true)
+    when(syncCounter === UInt(0)) {
+      nextCore := lookaheads(currentCore)
+      currentCore := nextCore
+      state := s_idle
     }
 
-    when(syncCounter === UInt(0)) {
-      scheduler.io.done := Bool(true)
+    when(connectors(currentCore).connectorSignals.syncReq === Bits(1)) {
+      nextCore := lookaheads(currentCore)
+      currentCore := nextCore
       state := s_idle
+      connectors(currentCore).connectorSignals.enable := Bits(0)
     }
   }
 
@@ -252,6 +268,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   idle(0)
 
   // Stall until data valid
+  println("\nStall until data valid\n")
+
   while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }
@@ -287,7 +305,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   wr(12, 4, Bits("b1111").litValue(), 2)
   wr(16, 5, Bits("b1111").litValue(), 3)
 
-  currentCore = peek(dut.scheduler.io.out).toInt
+  currentCore = peek(dut.currentCore).toInt
 
   step(1)
 
@@ -299,7 +317,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     }
   }
 
-  currentCore = peek(dut.scheduler.io.out).toInt
+  currentCore = peek(dut.currentCore).toInt
 
   while(rdResp != size) {
 
@@ -320,7 +338,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
 
     prevCore = currentCore
-    currentCore = peek(dut.scheduler.io.out).toInt
+    currentCore = peek(dut.currentCore).toInt
 
     if(peek(dut.io(prevCore).S.Resp) == OcpResp.NULL.litValue()) {
       idle(prevCore)
@@ -335,25 +353,28 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   println("\nSynchronization\n")
 
+  step(1)
   sync(0)
 
   step(1)
+  idle(0)
 
   while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }
 
-  expect(dut.scheduler.io.out, 0)
+  expect(dut.currentCore, 0)
 
   rd(4, Bits("b1111").litValue(), 0)
 
   step(1)
+  idle(0)
 
   while(peek(dut.io(0).S.Resp) != OcpResp.DVA.litValue()) {
     step(1)
   }
 
-  expect(dut.scheduler.io.out, 0)
+  expect(dut.currentCore, 0)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
   wr(4, 1, Bits("b1111").litValue(), 0)
@@ -366,91 +387,67 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
   }
 
-  expect(dut.scheduler.io.out, 0)
+  expect(dut.currentCore, 0)
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
   step(1)
+  rd(1, 0, 1)
 
-  // Request synchronization aligned exactly with the scheduler
-  while(peek(dut.scheduler.io.out) != 0) {
-    step(1)
-  }
+  step(1)
+  idle(1)
+
+  // Prevent double synchronization
+  println("\nHandle alternative during double synchronization\n")
 
   sync(0)
 
   step(1)
-
-  expect(dut.connectors(0).connectorSignals.syncReq, 1)
-
+  rd(1, 0, 1)
   idle(0)
 
   step(1)
+  idle(1)
+
+  step(1)
+
+  sync(0)
+
+  step(1)
+  idle(0)
+
+  while(peek(dut.io(0).S.Resp) == OcpResp.NULL.litValue()) {
+    step(1)
+  }
 
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
-  rd(4, Bits("b1111").litValue(), 0)
 
   // Request synchronization during another reserved period
+  println("\nRequest synchronization during another reserved period\n")
+
+  step(1)
+  rd(1, 0, 1)
+
+  step(1)
+  idle(1)
+
+  while(peek(dut.currentCore) == 0) {
+    step(1)
+  }
+
+  step(1)
+
+  sync(0)
   sync(1)
+  sync(2)
+  sync(3)
 
   step(1)
-
   idle(0)
-
-  step(1)
-
-  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
-  wr(4, 1, Bits("b1111").litValue(), 0)
   idle(1)
+  idle(2)
+  idle(3)
 
-  expect(dut.connectors(0).connectorSignals.syncReq, 0)
-  expect(dut.connectors(1).connectorSignals.syncReq, 1)
-
-  step(1)
-
-  idle(0)
-
-  step(1)
-  expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
-
-  // The next core should now be allowed to read memory
-  while(peek(dut.scheduler.io.out) != 1) {
-    step(1)
-  }
-
-  expect(dut.connectors(1).connectorSignals.syncReq, 1)
-
-  step(1)
-
-  // The new core is now synchronized
-
-  expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
-  rd(4, Bits("b1111").litValue(), 1)
-
-  step(1)
-
-  idle(1)
-
-  step(1)
-
-  expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
-  wr(4, 1, Bits("b1111").litValue(), 1)
-
-  step(1)
-
-  idle(1)
-
-  step(1)
-
-  expect(dut.io(1).S.Resp, OcpResp.DVA.litValue())
-
-  // The next core should now be allowed to read memory
-  while(peek(dut.scheduler.io.out) == 1) {
-    step(1)
-  }
-  
-  step(1)
-  
-  peek(dut.scheduler.io.out)
+  step(40)
 
 }
 
