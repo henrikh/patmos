@@ -95,7 +95,7 @@ class SchedulerTester(dut: Scheduler, size: Int) extends Tester(dut) {
 object SchedulerTester {
   def main(args: Array[String]): Unit = {
     chiselMainTest(Array("--genHarness", "--test", "--backend", "c",
-      "--compile", "--targetDir", "generated"),
+      "--compile", "--targetDir", "generated", "--vcd"),
       () => Module(new Scheduler(4))) {
         dut => new SchedulerTester(dut, 4)
       }
