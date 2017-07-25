@@ -102,7 +102,7 @@ class SSPMConnector extends CoreDevice() {
   when(state === s_waiting) {
 
     when(io.connectorSignals.enable === Bits(1)
-     && syncReqReg === Bits(0)) {
+    && syncReqReg === Bits(0)) {
 
       respReg := OcpResp.DVA
       state := s_idle
