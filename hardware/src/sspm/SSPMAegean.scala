@@ -460,8 +460,23 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   idle(2)
   idle(3)
 
-  step(40)
+  var outstanding = size
+  while(outstanding > 0) {
+    for(i <- 0 until size){
+      if(peek(dut.io(i).S.Resp).toInt == OcpResp.DVA.litValue()) {
+        outstanding = outstanding - 1
+      }
+    }
 
+    step(1)
+  }
+
+  val curCore = peek(dut.currentCore)
+  while(peek(dut.currentCore) == curCore) {
+    step(1)
+  }
+
+  step(1)
 }
 
 object SSPMAegeanTester {
