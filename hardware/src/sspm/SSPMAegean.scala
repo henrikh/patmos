@@ -30,22 +30,46 @@ class SSPMAegean(val nCores: Int) extends Module {
   // Generate modules
   val mem = Module(new memSPM(1024))
   val connectors = Vec.fill(nCores) { Module(new SSPMConnector()).io }
-  val waitingSignals = Vec.fill(nCores) { Bool() }
 
-  // Look ahead arbiter
+  // Lookahead arbiter
 
+  /* The lookahead arbiter considers if any cores have outstanding commands
+   * and then allocates time slots to those in need. The check happens in a
+   * round robin fashion in order to quarantee a reasonable WCET.
+   *
+   * If only a single core is using the SSPM it is effectively having
+   * uninterrupted access.
+   *
+   * Extended time slots for synchronization can not be allocated while in an
+   * extended time slot. If this happens, the requesting core is stalled and
+   * access is given to the next core with outstanding commands. If no core
+   * has outstanding commands, the original core is given back ownership.
+   */
+
+  // Implements prioritized lookahead by returning a multiplexer for a given
+  // core.
   def lookahead(n:Int, waiting:Seq[Bool]):UInt = {
     val indices = (0 until waiting.length).map((x:Int) => UInt(x))
+
+    /* Prioritized lookahead uses a priority mux to find the first waiting core.
+     * Example: core #3 has control and the priority becomes:
+     *
+     *     4 5 6 7 8 0 1 2 3
+     *
+     * Likewise, for all other cores.
+     */
+
     PriorityMux(
       waiting.drop(n+1) ++ waiting.take(n+1),
       indices.drop(n+1) ++ indices.take(n+1))
   }
 
+  // Generate lookahead units for each core
+  val waitingSignals = Vec.fill(nCores) { Bool() }
   val lookaheads = Vec((0 until nCores).map((x:Int) => lookahead(x, waitingSignals)))
 
   val nextCore = Reg(init = UInt(1, log2Up(nCores)))
   val currentCore = Reg(init = UInt(0, log2Up(nCores)))
-  val decoder = UIntToOH(currentCore, nCores)
 
   mem.io.M.Data := connectors(currentCore).connectorSignals.M.Data
   mem.io.M.Addr := connectors(currentCore).connectorSignals.M.Addr
@@ -54,14 +78,11 @@ class SSPMAegean(val nCores: Int) extends Module {
 
   // Connect the SSPMConnector with the SSPMAegean
   for (j <- 0 until nCores) {
-      connectors(j).ocp.M <> io(j).M
-      connectors(j).ocp.S <> io(j).S
-      connectors(j).connectorSignals.S.Data := mem.io.S.Data
-      connectors(j).ocp.M.Cmd := io(j).M.Cmd
-    waitingSignals(j) := connectors(j).connectorSignals.waiting
-
-    // Enable connectors based upon one-hot coding of scheduler
+    connectors(j).ocp.M <> io(j).M
+    connectors(j).ocp.S <> io(j).S
+    connectors(j).connectorSignals.S.Data := mem.io.S.Data
     connectors(j).connectorSignals.enable := Bits(0)
+    waitingSignals(j) := connectors(j).connectorSignals.waiting
   }
 
   // Synchronization state machine
@@ -73,10 +94,10 @@ class SSPMAegean(val nCores: Int) extends Module {
   syncCounter := syncCounter
 
   when(state === s_idle) {
-    state := s_idle
     nextCore := lookaheads(currentCore)
-    connectors(currentCore).connectorSignals.enable := Bits(1)
     currentCore := nextCore
+    connectors(currentCore).connectorSignals.enable := Bits(1)
+    state := s_idle
 
     when(connectors(currentCore).connectorSignals.syncReq === Bits(1)) {
       syncCounter := UInt(7)
@@ -89,9 +110,7 @@ class SSPMAegean(val nCores: Int) extends Module {
   when(state === s_sync) {
 
     syncCounter := syncCounter - UInt(1)
-
     connectors(currentCore).connectorSignals.enable := Bits(1)
-
     state := s_sync
 
     when(syncCounter === UInt(0)) {
@@ -103,8 +122,8 @@ class SSPMAegean(val nCores: Int) extends Module {
     when(connectors(currentCore).connectorSignals.syncReq === Bits(1)) {
       nextCore := lookaheads(currentCore)
       currentCore := nextCore
-      state := s_idle
       connectors(currentCore).connectorSignals.enable := Bits(0)
+      state := s_idle
     }
   }
 
