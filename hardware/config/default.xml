@@ -26,7 +26,7 @@
     <Dev DevType="Deadline" entity="Deadline" iface="OcpCore"/>
     <Dev DevType="SSPMDevice" entity="SSPM" iface="OcpCore">
       <params>
-      <param name="nCores" value="1"/>
+      <param name="nCores" value="2"/>
       </params>
     </Dev>
   </Devs>
