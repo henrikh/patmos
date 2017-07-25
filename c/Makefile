@@ -36,7 +36,7 @@ LDFLAGS-BOOTABLE?= \
 
 # Flags for compiling normal applications
 # Assuming 2 MB of main memory
-CFLAGS?=-target patmos-unknown-unknown-elf -O0 \
+CFLAGS?=-target patmos-unknown-unknown-elf -O2 \
 	-I$(CURDIR) -I $(CURDIR)/libelf/ \
 	-mpatmos-disable-vliw \
 	$(DEFINES)
