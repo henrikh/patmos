@@ -9,7 +9,7 @@
 #include "libsspm/led.h"
 
 
-volatile int ready[NR_CORES];
+volatile _UNCACHED int ready[NR_CORES];
 
 int core_running(int coreNr){
 	return boot_info->slave[coreNr].status != STATUS_RETURN;
