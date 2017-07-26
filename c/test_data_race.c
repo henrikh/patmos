@@ -9,6 +9,8 @@
 #include "libsspm/led.h"
 
 
+volatile int ready[NR_CORES];
+
 int core_running(int coreNr){
 	return boot_info->slave[coreNr].status != STATUS_RETURN;
 }
@@ -34,6 +36,11 @@ void slave(void* arg){
 
 	sprintf(hex, "%x", *contest_addr);
 	coprint_slave_print(cpuid, hex);	
+
+	ready[cpuid] = 1;
+	
+	//Wait for main to issue start
+	while(!ready[0]){}
 
 	int stop = 0;
 	for(int contest_length = 0; contest_length<2100 && !stop; contest_length++){
@@ -122,13 +129,29 @@ int main()
 	
 	printf("Initial lock: %x\n", *((volatile _SPM int *) coprint_end));
 	printf("Initial contest: %x\n", *contestP);
-
-	int i;	
-	for(i = 1; i< NR_CORES; i++){
+	
+	for(int k = 0; k<NR_CORES; k++){
+		ready[k] = 0;
+	}
+	
+	for(int i = 1; i< NR_CORES; i++){
 		corethread_create(&i, &slave, &coprint_end);
 	}
 		
 	while(core_running(1) || core_running(2) || core_running(3)){
+		if(!ready[0]){
+			int start = 1;
+			for(int k = 1; k<NR_CORES; k++){
+				start &= ready[k];
+			}
+			ready[0] = start;
+			if(!ready[0]){
+				printf("Slaves not ready.\n");
+			}else{
+				printf("Slaves ready.\n");
+			}
+		}		
+			
 		char buffer[CHANNEL_BUFFER_SIZE];
 		if(coprint_try_receive(1,buffer)){
 			printf("Core 1:");
@@ -166,7 +189,7 @@ int main()
 
 	//*/
 	int *res;
-	for(i = 1; i < NR_CORES; i++){
+	for(int i = 1; i < NR_CORES; i++){
 		corethread_join(i, (void **) &res);
 	}
 
