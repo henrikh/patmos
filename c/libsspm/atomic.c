@@ -32,12 +32,12 @@ int try_lock( volatile _SPM lock_t *l){
 		);
 	}
 	
-	asm volatile(	"lwl $r1 = [$r1];" 	// Sync to TDMA
-					"lwl %0 = [$r2];"	// Load lock value
-					"swl [$r2] = $r3;"	// write lock = LOCKED
-                 	: "=r" (lock_value)
-                 	: "{$r1}" (syncAddr), "{$r2}" (l), "{$r3}" (LOCKED)
-                 	: "$r0", "$r1", "$r2", "$r3"
+	asm volatile(	"lwl $r0 = [%[sync]];" 	// Sync to TDMA
+				"lwl %[lock_value] = [%[lock]];"	// Load lock value
+				"swl [%[lock]] = %[LOCKED];"	// write lock = LOCKED
+				: [lock_value] "=r" (lock_value), [lock] "+rm" (l)
+				: [sync] "r" (syncAddr), [LOCKED] "r" (LOCKED)
+				:
 	);
 
 	//If interrupts were enabled before then enable them

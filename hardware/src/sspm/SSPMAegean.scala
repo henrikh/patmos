@@ -449,6 +449,7 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   while(peek(dut.currentCore) == 0) {
     step(1)
   }
+
   sync(0)
   sync(1)
   sync(2)
