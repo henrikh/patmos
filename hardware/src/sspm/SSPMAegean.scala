@@ -31,8 +31,9 @@ class SSPMAegean(val nCores: Int) extends Module {
   val mem = Module(new memSPM(1024))
   val connectors = Vec.fill(nCores) { Module(new SSPMConnector()).io }
 
-  val nextCore = Reg(init = UInt(1, log2Up(nCores)))
-  val currentCore = Reg(init = UInt(0, log2Up(nCores)))
+  val firstCore = 0
+  val nextCore = Reg(init = UInt(firstCore + 1, log2Up(nCores)))
+  val currentCore = Reg(init = UInt(firstCore, log2Up(nCores)))
   val decoder = UIntToOH(currentCore, nCores)
 
   // Connect the SSPMConnector with the SSPMAegean
