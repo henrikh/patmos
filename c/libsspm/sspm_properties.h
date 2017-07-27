@@ -6,7 +6,7 @@
 #define LOWEST_SPM_ADDRESS (0xF00B0000)
 
 // The number of cpu cores
-#define NR_CORES (4)
+#define NR_CORES (9)
 
 // Total bytes in the shared memory
 #define TOTAL_SHARED_MEMORY (1024) 

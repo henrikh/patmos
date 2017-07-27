@@ -6,7 +6,7 @@
 #include "sspm_properties.h"
 
 //Must be an even number, dont know why
-#define CHANNEL_BUFFER_SIZE (30)
+#define CHANNEL_BUFFER_SIZE (26)
 
 
 /*

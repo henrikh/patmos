@@ -7,12 +7,22 @@
 #include "libsspm/coprint.h"
 #include "libsspm/atomic.h"
 #include "libsspm/led.h"
+#include "libsspm/sspm_properties.h"
 
 
 volatile _UNCACHED int ready[NR_CORES];
 
 int core_running(int coreNr){
 	return boot_info->slave[coreNr].status != STATUS_RETURN;
+}
+
+int any_slave_running(){
+	int running = 0;
+
+	for(int i = 1; i<NR_CORES; i++){
+		running |= core_running(i);
+	}
+	return running;
 }
 
 void slave(void* arg){
@@ -22,7 +32,7 @@ void slave(void* arg){
 	
 	char hex[11] = {0,0,0,0,0,0,0,0,0,0,0};
 	
-	coprint_slave_print(cpuid, "Lock address,value: ");
+	coprint_slave_print(cpuid, "Lock: ");
 	sprintf(hex, "%x", lock_addr);
 	coprint_slave_print(cpuid, hex);
 
@@ -30,7 +40,7 @@ void slave(void* arg){
 	coprint_slave_print(cpuid, hex);
 
 	
-	coprint_slave_print(cpuid, "Contest address,value: ");
+	coprint_slave_print(cpuid, "Contest: ");
 	sprintf(hex, "%x", contest_addr);
 	coprint_slave_print(cpuid, hex);
 
@@ -43,7 +53,7 @@ void slave(void* arg){
 	while(!ready[0]){}
 
 	int stop = 0;
-	for(int contest_length = 0; contest_length<2100 && !stop; contest_length++){
+	for(int contest_length = 0; contest_length<200000 && !stop; contest_length++){
 		int contest;
 		lock(lock_addr);	
 		led_on();
@@ -59,9 +69,9 @@ void slave(void* arg){
 			char contest_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 			sprintf(contest_string, "%x", contest);
 			
-			coprint_slave_print(cpuid, "Cheat1 at round:");
+			coprint_slave_print(cpuid, "Cheat1 round:");
 			coprint_slave_print(cpuid, contest_length_string);
-			coprint_slave_print(cpuid, "Cheat1 contest value:");
+			coprint_slave_print(cpuid, "Cheat1 value:");
 			coprint_slave_print(cpuid, contest_string);
 			stop = 1;			
 		}else{
@@ -80,9 +90,9 @@ void slave(void* arg){
 				char contest_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 				sprintf(contest_string, "%x", contest);
 			
-				coprint_slave_print(cpuid, "Cheat2 at round:");
+				coprint_slave_print(cpuid, "Cheat2 round:");
 				coprint_slave_print(cpuid, contest_length_string);
-				coprint_slave_print(cpuid, "Cheat2 contest value:");
+				coprint_slave_print(cpuid, "Cheat2 value:");
 				coprint_slave_print(cpuid, contest_string);
 				stop = 1;
 			}else{
@@ -97,23 +107,29 @@ void slave(void* arg){
 					char contest_string[11] = {0,0,0,0,0,0,0,0,0,0,0};		
 					sprintf(contest_string, "%x", contest);
 			
-					coprint_slave_print(cpuid, "Cheat3 at round:");
+					coprint_slave_print(cpuid, "Cheat3 round:");
 					coprint_slave_print(cpuid, contest_length_string);
-					coprint_slave_print(cpuid, "Cheat3 contest value:");
+					coprint_slave_print(cpuid, "Cheat3 value:");
 					coprint_slave_print(cpuid, contest_string);
 					stop = 1;
 				}
+				/*
+				if(cpuid == 5 && contest_length == 40000){
+					*contest_addr = *contest_addr + 1;
+				}
+				//*/
 			}		
 		}
 			
 		release(lock_addr);
 		led_off();
+		//led_off_for(1);
 	}
 	
 	if(stop){
-		coprint_slave_print(cpuid, "Erroneous end.");
+		coprint_slave_print(cpuid, "Error.");
 	}else{
-		coprint_slave_print(cpuid, "Successful end.");
+		coprint_slave_print(cpuid, "Success.");
 	}
 }
 
@@ -138,7 +154,7 @@ int main()
 		corethread_create(&i, &slave, &coprint_end);
 	}
 		
-	while(core_running(1) || core_running(2) || core_running(3)){
+	while(any_slave_running()){
 		if(!ready[0]){
 			int start = 1;
 			for(int k = 1; k<NR_CORES; k++){
@@ -153,41 +169,24 @@ int main()
 		}		
 			
 		char buffer[CHANNEL_BUFFER_SIZE];
-		if(coprint_try_receive(1,buffer)){
-			printf("Core 1:");
+		for(int i = 1; i<NR_CORES; i++){
+			if(coprint_try_receive(i,buffer)){
+			printf("Core %x:",i);
 			printf(buffer);
 			printf("\n");
-		}
-		if(coprint_try_receive(2,buffer)){
-			printf("Core 2:");
-			printf(buffer);
-			printf("\n");
-		}
-		if(coprint_try_receive(3,buffer)){
-			printf("Core 3:");
-			printf(buffer);
-			printf("\n");
+			}
 		}
 	}
+
 	char buffer[CHANNEL_BUFFER_SIZE];
-	if(coprint_try_receive(1,buffer)){
-		printf("Core 1:");
-		printf(buffer);
-		printf("\n");
-	}
-	if(coprint_try_receive(2,buffer)){
-		printf("Core 2:");
-		printf(buffer);
-		printf("\n");
-	}
-	if(coprint_try_receive(3,buffer)){
-		printf("Core 3:");
-		printf(buffer);
-		printf("\n");
+	for(int i = 1; i<NR_CORES; i++){
+		if(coprint_try_receive(i,buffer)){
+			printf("Core %x:",i);
+			printf(buffer);
+			printf("\n");
+		}
 	}
 	
-
-	//*/
 	int *res;
 	for(int i = 1; i < NR_CORES; i++){
 		corethread_join(i, (void **) &res);
