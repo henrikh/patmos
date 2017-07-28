@@ -52,7 +52,7 @@ void initialize_all_channels(){
 }
 
 volatile _SPM struct CHANNEL_T* channel_of(int coreNr){
-	volatile _SPM struct CHANNEL_T* address = LOWEST_SPM_ADDRESS + 
+	volatile _SPM struct CHANNEL_T* address = LOWEST_SSPM_ADDRESS + 
 												(coreNr * total_channel_footprint);
 	return address;
 }
