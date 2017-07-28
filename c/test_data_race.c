@@ -116,7 +116,7 @@ void slave(void* arg){
 					coprint_slave_print(cpuid, contest_string);
 					stop = 1;
 				}
-				///*
+				/*
 				if(cpuid == 3 && contest_length == 60000){
 					*contest_addr = *contest_addr + 1;
 				}
@@ -145,8 +145,8 @@ void slave(void* arg){
 
 int main()
 {
-	printf("Initializing string_to_master at %x.\n",LOWEST_SPM_ADDRESS);
-	int coprint_end = coprint_initialize(LOWEST_SPM_ADDRESS);
+	printf("Initializing string_to_master at %x.\n",LOWEST_SSPM_ADDRESS);
+	int coprint_end = coprint_initialize(LOWEST_SSPM_ADDRESS);
 	printf("Initializing ended at %x.\n", coprint_end);	
 	
 	release(coprint_end); //reset lock
