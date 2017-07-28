@@ -68,7 +68,7 @@ class SSPMAegean(val nCores: Int) extends Module {
   val waitingSignals = Vec.fill(nCores) { Bool() }
   val lookaheads = Vec((0 until nCores).map((x:Int) => lookahead(x, waitingSignals)))
 
-  val nextCore = Reg(init = UInt(1, log2Up(nCores)))
+  val nextCore = Reg(init = UInt(0, log2Up(nCores)))
   val currentCore = Reg(init = UInt(0, log2Up(nCores)))
 
   mem.io.M.Data := connectors(currentCore).connectorSignals.M.Data
