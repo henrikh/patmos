@@ -43,7 +43,7 @@ class SSPMAegean(val nCores: Int) extends Module {
       connectors(j).connectorSignals.S.Data := mem.io.S.Data
 
     // Enable connectors based upon one-hot coding of scheduler
-    connectors(j).connectorSignals.enable := decoder(j)
+    connectors(j).connectorSignals.enable := Bits(0)
   }
 
   mem.io.M.Data := connectors(currentCore).connectorSignals.M.Data
@@ -59,26 +59,41 @@ class SSPMAegean(val nCores: Int) extends Module {
   val syncCounter = Reg(init = UInt(0))
   syncCounter := syncCounter
 
+  val syncUsed = Reg(init = Bool(false))
+  val syncCore = Reg(init = UInt(0))
+
   when(state === s_idle) {
     state := s_idle
     nextCore := nextCore + UInt(1)
     currentCore := nextCore
+    connectors(currentCore).connectorSignals.enable := Bits(1)
 
     when(connectors(currentCore).connectorSignals.syncReq === Bits(1)) {
-      syncCounter := UInt(7)
-      nextCore := nextCore
-      currentCore := currentCore
-      state := s_sync
+      when(!syncUsed) {
+        syncCounter := UInt(7)
+        nextCore := nextCore
+        currentCore := currentCore
+        state := s_sync
+      }.otherwise {
+        connectors(currentCore).connectorSignals.enable := Bits(0)
+      }
     }
 
-    when(nextCore >= UInt(nCores - 1)) {
+    when(nextCore > UInt(nCores - 1)) {
       nextCore := UInt(0)
+    }
+
+    when(currentCore === syncCore) {
+      syncUsed := Bool(false)
     }
   }
 
   when(state === s_sync) {
 
     syncCounter := syncCounter - UInt(1)
+    syncUsed := Bool(true)
+    syncCore := currentCore
+    connectors(currentCore).connectorSignals.enable := Bits(1)
 
     state := s_sync
 
@@ -441,6 +456,13 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
 
   step(1)
 
+  while(peek(dut.currentCore) != 0) {
+    step(1)
+    expect(dut.io(0).S.Resp, OcpResp.NULL.litValue())
+  }
+
+  while(peek(dut.io(0).S.Resp) == 0) { step(1) }
+
   expect(dut.io(0).S.Resp, OcpResp.DVA.litValue())
 
   // Request synchronization during another reserved period
@@ -449,6 +471,8 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
   while(peek(dut.currentCore) == 0) {
     step(1)
   }
+
+  step(1)
 
   sync(0)
   sync(1)
@@ -472,12 +496,44 @@ class SSPMAegeanTester(dut: SSPMAegean, size: Int) extends Tester(dut) {
     step(1)
   }
 
-  val curCore = peek(dut.currentCore)
+  var curCore = peek(dut.currentCore)
   while(peek(dut.currentCore) == curCore) {
     step(1)
   }
 
   step(1)
+
+  {
+    for(i <- 0 until size){
+      sync(i)
+    }
+    step(1)
+    for(i <- 0 until size){
+      idle(i)
+    }
+
+    var outstanding = Array.fill(size) { false }
+    while(!outstanding.forall((T) => T)) {
+      for(i <- 0 until size){
+        if(!outstanding(i) && peek(dut.io(i).S.Resp).toInt == OcpResp.DVA.litValue()) {
+          outstanding(i) = true
+          wr(4, i, Bits("b1111").litValue(), i)
+        }
+      }
+
+      step(1)
+      for(i <- 0 until size){
+        idle(i)
+      }
+    }
+
+    val curCore = peek(dut.currentCore)
+    while(peek(dut.currentCore) == curCore) {
+      step(1)
+    }
+
+    step(1)
+  }
 }
 
 object SSPMAegeanTester {
