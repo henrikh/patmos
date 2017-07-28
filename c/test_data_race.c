@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <machine/patmos.h>
 #include <machine/boot.h>
+#include <machine/rtc.h>
 #include "libcorethread/corethread.c"
 #include "libsspm/coprint.h"
 #include "libsspm/atomic.h"
@@ -50,7 +51,9 @@ void slave(void* arg){
 	ready[cpuid] = 1;
 	
 	//Wait for main to issue start
-	while(!ready[0]){}
+	while(!ready[0]){
+		led_off();	
+	}
 
 	int stop = 0;
 	for(int contest_length = 0; contest_length<200000 && !stop; contest_length++){
@@ -113,8 +116,8 @@ void slave(void* arg){
 					coprint_slave_print(cpuid, contest_string);
 					stop = 1;
 				}
-				/*
-				if(cpuid == 5 && contest_length == 40000){
+				///*
+				if(cpuid == 3 && contest_length == 60000){
 					*contest_addr = *contest_addr + 1;
 				}
 				//*/
@@ -124,6 +127,13 @@ void slave(void* arg){
 		release(lock_addr);
 		led_off();
 		//led_off_for(1);
+		//Wait for random time
+		///*
+		int random = get_cpu_cycles() % 5;
+		for(int i = 0; i<random; i++){
+			led_off();
+		}
+		//*/
 	}
 	
 	if(stop){

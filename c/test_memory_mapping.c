@@ -13,7 +13,7 @@ void slaveCompleteMemoryMapVerification(void* args){
 	led_on();
 	int cpuid = get_cpuid();
 	int intervalSize = (TOTAL_SHARED_MEMORY/1);
-	int startAddr = LOWEST_SPM_ADDRESS + (intervalSize * get_cpuid());
+	int startAddr = LOWEST_SSPM_ADDRESS + (intervalSize * get_cpuid());
 	int endAddr = startAddr + intervalSize ;
 	int wordCount = intervalSize/4;
 	
@@ -49,15 +49,20 @@ void slaveCompleteMemoryMapVerification(void* args){
 }
 
 int main(){
-
+	printf("Starting memory test.\n");
+	
 	slaveCompleteMemoryMapVerification(NULL);
+	
+	printf("Main core -> memory verified.\n");
 
 	int *res;
 	for(int i = 1; i< NR_CORES; i++){
 		corethread_create(&i, &slaveCompleteMemoryMapVerification, NULL);
 		corethread_join(i, (void **) &res);
+		printf("Core %x -> memory verified.\n",i);
 	}
-	printf("Memory verified.");
+	printf("Memory verified.\n");
+	return 0;
 }
 
 
