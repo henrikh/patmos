@@ -20,7 +20,7 @@ const int SENDER_BUFFER_CAPACITY = 128;
 
 const int RECEIVER_BUFFER_CAPACITY = 128;
 
-int ready[1+(2*SENDER_RECEIVER_PAIRS)];
+volatile _UNCACHED int ready[1+(2*SENDER_RECEIVER_PAIRS)];
 
 void sender_slave(void* args){
 
