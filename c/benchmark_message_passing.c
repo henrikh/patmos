@@ -68,25 +68,30 @@ void receiver_slave(void* args){
 	}
 }
 
-void main(){
+int main(){
 
-	volatile _SPM struct SSPM_MP_DESC *channel = LOWEST_SSPM_ADDRESS;
+	volatile _SPM struct SSPM_MP_DESC *channel[2*SENDER_RECEIVER_PAIRS];
+	channel[0] = LOWEST_SSPM_ADDRESS;
 	
-	sspm_mp_init(channel, CHANNEL_BUFFER_CAPACITY);
+	int size = sspm_mp_init(channel[0], CHANNEL_BUFFER_CAPACITY);
+
+	for(int i = 1; i < SENDER_RECEIVER_PAIRS; i++){
+		channel[i] = size + 4;
+		size = sspm_mp_init(channel[i], CHANNEL_BUFFER_CAPACITY);
+		printf("Buffer size: %x.\n", size);
+	}
 
 	for(int i = 0; i< (1+(2*SENDER_RECEIVER_PAIRS)); i++){
 		ready[i] = 0;
 	}
-	
-	for(int i = 1; i <= (2*SENDER_RECEIVER_PAIRS);i++){
-		if((i - 1)%2){
-			corethread_create(&i, &sender_slave, (void*)channel);
-		}else{
-			corethread_create(&i, &receiver_slave, (void*)channel);
-		}
+
+	for(int i = 1; i <= SENDER_RECEIVER_PAIRS; i++){
+		int core = i*2;
+		corethread_create(&core, &sender_slave, (void*)channel[i-1]);
+		core--;
+		corethread_create(&core, &receiver_slave, (void*)channel[i-1]);
 	}
-	
-	
+
 	while(!ready[0]){
 		int start = 1;
 		for(int k = 1; k<(1+(2*SENDER_RECEIVER_PAIRS)); k++){
