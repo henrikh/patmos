@@ -164,6 +164,7 @@ $(LIBAUDIO): $(BUILDDIR)/libaudio/dsp_algorithms.o $(BUILDDIR)/libaudio/audio.o
 .PHONY: libsspm
 libsspm: $(LIBSSPM)
 $(BUILDDIR)/libsspm/atomic.o: libsspm/atomic.h
+$(BUILDDIR)/libsspm/sspm_properties.o: libsspm/sspm_properties.h
 $(BUILDDIR)/libsspm/smp.o: libsspm/atomic.h libsspm/smp.h
 $(BUILDDIR)/libsspm/coprint.o: libsspm/coprint.h
 $(BUILDDIR)/libsspm/led.o: libsspm/led.h
