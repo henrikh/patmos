@@ -78,15 +78,14 @@ void main(){
 		ready[i] = 0;
 	}
 	
-	for(int i = 0; i< (2*SENDER_RECEIVER_PAIRS);i++){
-		if(i%2){
+	for(int i = 1; i <= (2*SENDER_RECEIVER_PAIRS);i++){
+		if((i - 1)%2){
 			corethread_create(&i, &sender_slave, (void*)channel);
 		}else{
 			corethread_create(&i, &receiver_slave, (void*)channel);
 		}
 	}
 	
-
 	
 	while(!ready[0]){
 		int start = 1;
