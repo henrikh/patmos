@@ -21,7 +21,7 @@ typedef enum {
 	// Transmission has been finished by the sender.
 	// Another transmission cannot begin before
 	// the receiver acknowledges it.
-	ENDED, 
+	ENDED,	 
 	// Transmission end has been acknowledged by the receiver.
 	// Should also be the initial state of the channel after initialization.
 	ACKNOWLEDGED
