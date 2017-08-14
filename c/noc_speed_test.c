@@ -13,9 +13,9 @@
 
 const int NOC_MASTER = 0;
 
-const int SENDER_RECEIVER_PAIRS = 1;
+const int SENDER_RECEIVER_PAIRS = 2;
 
-const int CHANNEL_BUFFER_CAPACITY = 1;
+const int CHANNEL_BUFFER_CAPACITY = 54;
 
 volatile _UNCACHED int ready[1+(2*SENDER_RECEIVER_PAIRS)];
 
@@ -26,7 +26,8 @@ volatile _UNCACHED int intervals[1+(2*SENDER_RECEIVER_PAIRS)];
 void sender_slave(void* args){
 	int cpuid = get_cpuid();
 		
-	qpd_t * chan = mp_create_qport(1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int), MP_CHAN_NUM_BUF);
+	qpd_t * chan = mp_create_qport(1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
+	
 	mp_init_ports();
 	ready[get_cpuid()] = 1;
 	while(!ready[0]){led_off();}
@@ -50,7 +51,7 @@ void sender_slave(void* args){
 	
 	sent = get_cpu_cycles();
 	
-	mp_nbsend(chan);
+	mp_send(chan,0);
 	while(*(chan->send_recv_count) != 1){}
 
 	received = get_cpu_cycles();
