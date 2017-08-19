@@ -13,7 +13,7 @@
 
 const int NOC_MASTER = 0;
 
-const int SENDER_RECEIVER_PAIRS = 2;
+const int SENDER_RECEIVER_PAIRS = 4;
 
 const int CHANNEL_BUFFER_CAPACITY = 54;
 
@@ -25,10 +25,10 @@ volatile _UNCACHED int intervals[1+(2*SENDER_RECEIVER_PAIRS)];
 
 void sender_slave(void* args){
 	int cpuid = get_cpuid();
-		
-	qpd_t * chan = mp_create_qport(1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
-	
+	qpd_t * chan = mp_create_qport(cpuid-1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
+
 	mp_init_ports();
+
 	ready[get_cpuid()] = 1;
 	while(!ready[0]){led_off();}
 	led_on();
@@ -39,7 +39,6 @@ void sender_slave(void* args){
 	unsigned long long received;
 
 	if(*(chan->send_recv_count) == 0){
-
 		start = get_cpu_cycles();
 
 		for(int i = 0; i<CHANNEL_BUFFER_CAPACITY; i++){
@@ -52,19 +51,22 @@ void sender_slave(void* args){
 	sent = get_cpu_cycles();
 	
 	mp_send(chan,0);
+	
 	while(*(chan->send_recv_count) != 1){}
-
 	received = get_cpu_cycles();
-
+	
+	
 	led_off();
 	rwtime[get_cpuid()] = (int) end - start;
 	intervals[get_cpuid()] = (int) received - sent;
+	
 }
 
 void receiver_slave(void* args){
 	int cpuid = get_cpuid();
-
-	qpd_t * chan = mp_create_qport(1, SINK, CHANNEL_BUFFER_CAPACITY*sizeof(int), MP_CHAN_NUM_BUF);
+	
+	qpd_t * chan = mp_create_qport(cpuid, SINK, CHANNEL_BUFFER_CAPACITY*sizeof(int), MP_CHAN_NUM_BUF);
+	
 	mp_init_ports();
 	
 	int data[CHANNEL_BUFFER_CAPACITY];
@@ -76,15 +78,14 @@ void receiver_slave(void* args){
 	ready[get_cpuid()] = 1;
 	while(!ready[0]){led_off();}
 	led_on();
-
+	
 	unsigned long long start;
 	unsigned long long end;
 	unsigned long long sent;
 	unsigned long long received;
 
-	
 	mp_recv(chan,0);
-
+	
 	start = get_cpu_cycles();
 	asm volatile ("" : : : "memory");
 
@@ -94,22 +95,19 @@ void receiver_slave(void* args){
 	
 	asm volatile ("" : : : "memory");
 	end = get_cpu_cycles();
-
+	
 
 	asm volatile ("" : : : "memory");
 	mp_ack(chan,0);
 	asm volatile ("" : : : "memory");
 
 	received = get_cpu_cycles();
-
-
+	
 	led_off();
-
 	rwtime[get_cpuid()] = (int) end - start;
-	
-	intervals[get_cpuid()] = received - end;
-	
+	intervals[get_cpuid()] = received - end;	
 }
+
 
 int main(){	;
 	
@@ -158,7 +156,6 @@ int main(){	;
 	
 	return 0;
 }
-
 
 
 
