@@ -7,105 +7,59 @@
 #include "libsspm/led.h"
 #include "libmp/mp.h"
 #include "libmp/mp_internal.h"
+#include "libsspm/sspm_benchmark.h"
 
 #define MP_CHAN_NUM_BUF 2
 #define MP_CHAN_BUF_SIZE 40
 
 const int NOC_MASTER = 0;
 
-const int SENDER_RECEIVER_PAIRS = 4;
+const int TIMES_TO_SEND = 1000;
+volatile _UNCACHED int send_clock[TIMES_TO_SEND];
+volatile _UNCACHED int recv_clock[TIMES_TO_SEND];
+volatile _UNCACHED int ack_recv_clock[TIMES_TO_SEND];
 
-const int CHANNEL_BUFFER_CAPACITY = 54;
 
-volatile _UNCACHED int ready[1+(2*SENDER_RECEIVER_PAIRS)];
-
-volatile _UNCACHED int rwtime[1+(2*SENDER_RECEIVER_PAIRS)];
-
-volatile _UNCACHED int intervals[1+(2*SENDER_RECEIVER_PAIRS)];
-
-void sender_slave(void* args){
+int sender_slave(void* args){
 	int cpuid = get_cpuid();
-	qpd_t * chan = mp_create_qport(cpuid-1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
+	qpd_t * chan = mp_create_qport(1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
 
 	mp_init_ports();
 
-	ready[get_cpuid()] = 1;
-	while(!ready[0]){led_off();}
 	led_on();
 
-	unsigned long long start;
-	unsigned long long end;
-	unsigned long long sent;
-	unsigned long long received;
-
-	if(*(chan->send_recv_count) == 0){
-		start = get_cpu_cycles();
-
-		for(int i = 0; i<CHANNEL_BUFFER_CAPACITY; i++){
-			(( volatile int _SPM * ) ( chan->write_buf ))[i] = -1;
-		}
-;
-		end = get_cpu_cycles();
-	}	
-	
-	sent = get_cpu_cycles();
-	
-	mp_send(chan,0);
-	
-	while(*(chan->send_recv_count) != 1){}
-	received = get_cpu_cycles();
-	
+	for(int k = 0; k< TIMES_TO_SEND; k++){
+		
+		send_clock[k] = get_cpu_cycles();
+		asm volatile ("" : : : "memory");
+		mp_send(chan,0);
+		while(*(chan->send_recv_count) != (k+1)){}
+		asm volatile ("" : : : "memory");
+		ack_recv_clock[k] = get_cpu_cycles();
+		
+	}
 	
 	led_off();
-	rwtime[get_cpuid()] = (int) end - start;
-	intervals[get_cpuid()] = (int) received - sent;
-	
+	return 0;
 }
 
-void receiver_slave(void* args){
+int receiver_slave(void* args){
 	int cpuid = get_cpuid();
-	
-	qpd_t * chan = mp_create_qport(cpuid, SINK, CHANNEL_BUFFER_CAPACITY*sizeof(int), MP_CHAN_NUM_BUF);
+	qpd_t * chan = mp_create_qport(1, SINK, CHANNEL_BUFFER_CAPACITY*sizeof(int), MP_CHAN_NUM_BUF);
 	
 	mp_init_ports();
-	
-	int data[CHANNEL_BUFFER_CAPACITY];
-	
-	for(int i = 0; i<CHANNEL_BUFFER_CAPACITY; i++){
-		data[i] = 0;
-	}
 
-	ready[get_cpuid()] = 1;
-	while(!ready[0]){led_off();}
 	led_on();
 	
-	unsigned long long start;
-	unsigned long long end;
-	unsigned long long sent;
-	unsigned long long received;
-
-	mp_recv(chan,0);
-	
-	start = get_cpu_cycles();
-	asm volatile ("" : : : "memory");
-
-	for(int i = 0; i< CHANNEL_BUFFER_CAPACITY; i++){
-		data[i] = (( volatile int _SPM * ) ( chan->read_buf ))[i];
+	for(int k = 0; k<TIMES_TO_SEND; k++){
+		mp_recv(chan,0);
+		asm volatile ("" : : : "memory");
+		recv_clock[k] = get_cpu_cycles();
+		asm volatile ("" : : : "memory");
+		mp_ack(chan,0);
 	}
 	
-	asm volatile ("" : : : "memory");
-	end = get_cpu_cycles();
-	
-
-	asm volatile ("" : : : "memory");
-	mp_ack(chan,0);
-	asm volatile ("" : : : "memory");
-
-	received = get_cpu_cycles();
-	
-	led_off();
-	rwtime[get_cpuid()] = (int) end - start;
-	intervals[get_cpuid()] = received - end;	
+	return 0;
 }
 
 
@@ -114,46 +68,27 @@ int main(){	;
 	led_off();
 	
 	printf("Starting\n");
-
-	for(int i = 0; i< (1+(2*SENDER_RECEIVER_PAIRS)); i++){
-		ready[i] = 0;
-	}
-	
-	for(int i = 1; i <= SENDER_RECEIVER_PAIRS; i++){
-		int core = i*2;
-		corethread_create(&core, &sender_slave, NULL);
-		core--;
-		corethread_create(&core, &receiver_slave, NULL);
-	}
-
-	while(!ready[0]){
-		int start = 1;
-		for(int k = 1; k<(1+(2*SENDER_RECEIVER_PAIRS)); k++){
-			start &= ready[k];
-		}
-		ready[0] = start;
-	}
 	led_on();
-	
-	int start = get_cpu_cycles();
-	int *res;
-	for(int i = 1; i<(1+(2*SENDER_RECEIVER_PAIRS)); i++){
-		corethread_join(i, (void **) &res);
-	}
-	int end = get_cpu_cycles();
 
-	printf("Cycles spent: %d.\n", (end - start));
-	
-	for(int i = 1; i <= 2*SENDER_RECEIVER_PAIRS; i += 2){
-		printf("Receiver extract\t\t(%d): %d.\n", i, rwtime[i]);
-		printf("Sender deposit\t\t\t(%d): %d.\n", i+1, rwtime[i+1]);
+	int core1 = 1;
+	int core2 = 2;
+	corethread_create(&core1, &sender_slave, NULL);
+	corethread_create(&core2, &receiver_slave, NULL);
+		
+	int res;
+	corethread_join(core1, (void **) &res);
+	corethread_join(core2, (void **) &res);
+
+	printf("Send clocks:\n");
+	for(int i = 1; i < TIMES_TO_SEND; i++){
+		printf("%d\n", (recv_clock[i] - send_clock[i]));
 	}
 	
-	for(int i = 1; i <= 2*SENDER_RECEIVER_PAIRS; i+=2){
-		printf("Receiver ack\t\t\t(%d): %d.\n", i, intervals[i]);
-		printf("Sender send and wait for ack\t(%d): %d.\n", i+1, intervals[i+1]);
+	printf("Ack clocks:\n");
+	for(int i = 1; i < TIMES_TO_SEND; i++){
+		printf("%d\n", (ack_recv_clock[i] - recv_clock[i]));
 	}
-	
+
 	return 0;
 }
 
