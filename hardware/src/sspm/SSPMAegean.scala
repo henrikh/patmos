@@ -65,7 +65,7 @@ class SSPMAegean(val nCores: Int) extends Module {
     currentCore := nextCore
 
     when(connectors(currentCore).connectorSignals.syncReq === Bits(1)) {
-      syncCounter := UInt(7)
+      syncCounter := UInt(5)
       nextCore := nextCore
       currentCore := currentCore
       state := s_sync
