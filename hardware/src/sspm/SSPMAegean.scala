@@ -71,7 +71,7 @@ class SSPMAegean(val nCores: Int) extends Module {
       state := s_sync
     }
 
-    when(nextCore >= UInt(nCores - 1)) {
+    when(nextCore > UInt(nCores - 1)) {
       nextCore := UInt(0)
     }
   }
