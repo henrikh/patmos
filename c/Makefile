@@ -9,6 +9,7 @@ LIBMP=$(BUILDDIR)/libmp.a
 LIBCORETHREAD=$(BUILDDIR)/libcorethread.a
 LIBETH=$(BUILDDIR)/libeth.a
 LIBAUDIO=$(BUILDDIR)/libaudio.a
+LIBSSPM=$(BUILDDIR)/libsspm.a
 LIBELF=$(BUILDDIR)/libelf.a
 
 NOCINIT?=cmp/nocinit.c
@@ -69,27 +70,27 @@ $(BUILDDIR)/%.o: %.c Makefile
 	$(CC) $(CFLAGS) -c -o $@ $(filter %.c,$^)
 
 # A target for regular applications
-$(BUILDDIR)/%.elf: %.c $(NOCINIT) $(LIBMP) $(LIBNOC) $(LIBCORETHREAD) $(LIBETH) $(LIBAUDIO) $(LIBELF) Makefile
+$(BUILDDIR)/%.elf: %.c $(NOCINIT) $(LIBMP) $(LIBNOC) $(LIBCORETHREAD) $(LIBETH) $(LIBAUDIO) $(LIBSSPM) $(LIBELF) Makefile
 	mkdir -p $(BUILDDIR)/$(dir $*)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.c %.s,$^) -L$(BUILDDIR) -lmp -lnoc -lcorethread -leth -lelf -lm -laudio
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.c %.s,$^) -L$(BUILDDIR) -lmp -lnoc -lcorethread -leth -lelf -lm -laudio -lsspm
 
 $(BUILDDIR)/%.s: %.c Makefile
 	mkdir -p $(BUILDDIR)/$(dir $*)
 	$(CC) $(CFLAGS) -fpatmos-emit-asm -S -o $@ $(filter %.c,$^)
 
 # A target for bootable applications (e.g., the bootloader)
-$(BUILDDIR)/bootable-%.elf: %.c $(LIBETH) $(LIBNOC) $(NOCINIT) Makefile
+$(BUILDDIR)/bootable-%.elf: %.c $(LIBETH) $(LIBNOC) $(NOCINIT) $(LIBSSPM) Makefile
 	mkdir -p $(BUILDDIR)/$(dir $*)
-	$(CC) $(CFLAGS-BOOTABLE) $(LDFLAGS-BOOTABLE) -o $@ $(filter %.c %.s,$^) -L$(BUILDDIR) -leth -lnoc
+	$(CC) $(CFLAGS-BOOTABLE) $(LDFLAGS-BOOTABLE) -o $@ $(filter %.c %.s,$^) -L$(BUILDDIR) -leth -lnoc -lsspm
 
 $(BUILDDIR)/bootable-%.s: %.c Makefile
 	mkdir -p $(BUILDDIR)/$(dir $*)
 	$(CC) $(CFLAGS-BOOTABLE) -fpatmos-emit-asm -S -o $@ $(filter %.c,$^)
 
 # A target for applications that use virtual memory
-$(BUILDDIR)/vm-%.elf: %.c $(NOCINIT) $(LIBMP) $(LIBNOC) $(LIBCORETHREAD) $(LIBETH) $(LIBELF) Makefile
+$(BUILDDIR)/vm-%.elf: %.c $(NOCINIT) $(LIBMP) $(LIBNOC) $(LIBCORETHREAD) $(LIBETH) $(LIBELF) $(LIBSSPM) Makefile
 	mkdir -p $(BUILDDIR)/$(dir $*)
-	$(CC) $(CFLAGS-VM) $(LDFLAGS-VM) -o $@ $(filter %.c %.s,$^) -L$(BUILDDIR) -lmp -lnoc -lcorethread -leth -lelf
+	$(CC) $(CFLAGS-VM) $(LDFLAGS-VM) -o $@ $(filter %.c %.s,$^) -L$(BUILDDIR) -lmp -lnoc -lcorethread -leth -lelf -lsspm
 
 # application-specific additional dependencies
 $(BUILDDIR)/bootable-bootloader.elf: download.c decompress.c ethmac.c boot.h bootable.h
@@ -158,6 +159,20 @@ $(BUILDDIR)/libaudio/dsp_algorithms.o: libaudio/dsp_algorithms.h
 $(BUILDDIR)/libaudio/audio.o: libaudio/audio.h libaudio/audioinit.h libaudio/latencyinit.h
 $(LIBAUDIO): $(BUILDDIR)/libaudio/dsp_algorithms.o $(BUILDDIR)/libaudio/audio.o
 	patmos-ar r $@ $^
+
+# library for shared scratchpad memory (sspm)
+.PHONY: libsspm
+libsspm: $(LIBSSPM)
+$(BUILDDIR)/libsspm/atomic.o: libsspm/atomic.h
+$(BUILDDIR)/libsspm/sspm_properties.o: libsspm/sspm_properties.h
+$(BUILDDIR)/libsspm/smp.o: libsspm/atomic.h libsspm/smp.h
+$(BUILDDIR)/libsspm/coprint.o: libsspm/coprint.h
+$(BUILDDIR)/libsspm/led.o: libsspm/led.h
+$(BUILDDIR)/libsspm/mp.o: libsspm/mp.h
+$(BUILDDIR)/libsspm/sspm_benchmark.o: libsspm/sspm_benchmark.h
+$(LIBSSPM): $(BUILDDIR)/libsspm/atomic.o $(BUILDDIR)/libsspm/smp.o $(BUILDDIR)/libsspm/coprint.o $(BUILDDIR)/libsspm/led.o $(BUILDDIR)/libsspm/mp.o
+	patmos-ar r $@ $^
+
 
 # library for parsing ELF files
 .PHONY: libelf

@@ -29,7 +29,7 @@ CXXFLAGS=-O1
 # Quick fix for Mac OS X
 # How are include paths handled these days in *nix? CMake?
 ifeq ($(TERM_PROGRAM),$(filter $(TERM_PROGRAM), Apple_Terminal iTerm.app))
-	INC_EXTRA=-I /opt/local/include -I /usr/local/include/libelf -I /opt/local/include/libelf -L/opt/local/lib
+	INC_EXTRA=-I /opt/local/include -I /usr/local/include/libelf -I /opt/local/include/libelf -L /opt/local/lib
 else
 	INC_EXTRA=
 endif
@@ -41,12 +41,14 @@ SRC=$(shell find src -name '*.scala')
 MAIN=patmos.PatmosMain
 
 # main classes for core, memory controller and arbiter
+# here we add for our sspm
 COREMAIN=patmos.PatmosCoreMain
 MEMCTRLMAIN32=io.SSRam32Main
 MEMCTRLMAIN16=io.SRamMain
 MEMCTRLMAINOC=io.OCRamMain
 ARBITERMAIN=ocp.ArbiterMain
 TDMARBITERMAIN=ocp.TdmArbiterWrapperMain
+MEMSSPM=sspm.SSPMAegeanMain
 
 # config file for Patmos -- now just frequency
 #CONFIG=default
@@ -131,6 +133,9 @@ $(HWBUILDDIR)/Arbiter.v: $(SRC)
 $(HWBUILDDIR)/TdmArbiterWrapper.v: $(SRC)
 	$(SBT) "run-main $(TDMARBITERMAIN) $(ARBITER_CNT) $(ARBITER_ADDR_WIDTH) $(ARBITER_DATA_WIDTH) $(ARBITER_BURST_LENGTH) --targetDir $(HWBUILDDIR) --cse --backend v"
 
+$(HWBUILDDIR)/SSPMAegean.v: $(SRC)
+	$(SBT) "run-main $(MEMSSPM) $(CORE_CNT) --targetDir $(HWBUILDDIR) --cse --backend v"
+
 # run Verilog simulation
 vsim: verilog
 	echo '`timescale 1 ns / 100 ps' > $(HWBUILDDIR)/Patmos.v.tmp
@@ -176,3 +181,41 @@ modcomp:
 .FORCE:
 
 .PHONY: all emulator test view verilog vsim
+
+# SSPM make targets
+
+SSPM-test:
+	$(SBT) "run-main io.SSPMTester"
+
+SSPMAegean:
+	$(SBT) "run-main sspm.SSPMAegeanMain $(CORE_CNT) --targetDir $(HWGENDIR) --cse --backend v"
+
+SSPMAegean-test:
+	$(SBT) "run-main sspm.SSPMAegeanTester"
+
+SSPM-scheduler:
+	$(SBT) "run-main sspm.SchedulerMain"
+
+SSPM-scheduler-test:
+	$(SBT) "run-main sspm.SchedulerTester"
+
+SSPM-connector:
+	$(SBT) "run-main sspm.SSPMConnectorMain"
+
+SSPM-connector-test:
+	$(SBT) "run-main sspm.SSPMConnectorTester"
+
+SSPM-connector-view:
+	gtkwave generated/SSPMConnector.vcd --save=SSPMConnector.gtkw
+
+SSPM-memmodule:
+	$(SBT) "run-main sspm.memModuleMain"
+
+SSPM-memmodule-test:
+	$(SBT) "run-main sspm.memModuleTester"	
+
+SSPM-memspm:
+	$(SBT) "run-main sspm.memSPMMain"		
+
+SSPM-memspm-test:
+	$(SBT) "run-main sspm.memSPMTester"
