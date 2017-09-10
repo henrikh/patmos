@@ -10,7 +10,7 @@ int inline try_lock( volatile _SPM lock_t *l){
 	int syncAddr = SCHEDULE_SYNC;
 	lock_t lock_value;
 	
-	intr_enable();
+	intr_disable();
 	asm volatile(
 				"lwl $r0 = [%[sync]];" 	// Sync to TDMA
 				"lwl %[lock_value] = [%[lock]];"	// Load lock value
@@ -19,12 +19,15 @@ int inline try_lock( volatile _SPM lock_t *l){
 				: [sync] "r" (syncAddr), [LOCKED] "r" (LOCKED)
 				: "$r0"
 	);
-	intr_disable();
+	intr_enable();
 
 	return  lock_value == OPEN ;
 }
 
 void inline lock(volatile _SPM lock_t *l){
+	// This loop is needlessly slow because the compiler 
+	// pushes some values to main memory with each iteration.
+	// Look at the generated assembly for details.
 	while( !try_lock(l) ){}
 }
 
