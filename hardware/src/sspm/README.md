@@ -40,8 +40,14 @@ Both tests export `.vcd` files in the `generated` folder. These files can be ope
 Running software benchmarks
 --------------------------------------------
 
-Several programs for benchmarking the real-world performance are available.
+Several programs for benchmarking the real-world performance are available in `patmos/c/libsspm/bencharks`:
+* noc_write_bench.c: Benchmarks the execution time of writing to the Argo NoC local scratchpads.
+* noc_roundtrip_bench.c: Benchmarks the execution time of sending a burst of data and waiting for an acknowledgement using the Argo NoC.
+* sspm_write_bench.c: Benchmarks the execution time of writing to the SSPM.
+* sspm_roundtrip_bench.c: Benchmarks the execution time of sending a burst of data and waiting for an acknowledgement using the SSPM.
+* sspm_locking_bench.c: Benchmarks the execution time of acquiring a lock using extended time slots while other cores also use extended time slots.
+* sspm_write_with_lock_contenttion_bench.c: Benchmarks the execution time of writing to the shared scratchpad memory while other cores use extended time slots.
 
-...
+
 
 [the Patmos Handbook]: http://patmos.compute.dtu.dk/patmos_handbook.pdf

@@ -6,6 +6,8 @@
 #include "libcorethread/corethread.c"
 #include "libmp/mp.h"
 #include "libmp/mp_internal.h"
+#include "libsspm/sspm_benchmark.h"
+#include "libsspm/sspm_properties.h"
 
 #define MP_CHAN_NUM_BUF 2
 #define MP_CHAN_BUF_SIZE 40
@@ -17,18 +19,9 @@ const int TIMES_TO_WRITE = 1000;
 int start_clock[TIMES_TO_WRITE];
 int end_clock[TIMES_TO_WRITE];
 
-void slave(void* args){
-	mp_create_qport(1, SINK, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
-	mp_init_ports();
-}
-
 int main(){
 
 	int cpuid = get_cpuid();
-	int slaveId = 1;
-	corethread_create(&slaveId, &slave, NULL);
-	qpd_t * chan = mp_create_qport(1, SOURCE, CHANNEL_BUFFER_CAPACITY*sizeof(int),MP_CHAN_NUM_BUF);
-	mp_init_ports();
 	
 	int start, end;
 
@@ -38,7 +31,7 @@ int main(){
 		asm volatile ("" : : : "memory");
 		
 		for(int k = 0; k<CHANNEL_BUFFER_CAPACITY; k++){
-			(( volatile int _SPM * ) ( chan->write_buf ))[k] = i;
+			(( volatile int _SPM * ) LOWEST_SPM_ADDRESS)[k] = i;
 		}
 		asm volatile ("" : : : "memory");
 		end = get_cpu_cycles();
